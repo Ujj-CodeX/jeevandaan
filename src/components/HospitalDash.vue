@@ -18,21 +18,23 @@
     <div class="d-flex align-items-center">
         <i class="fas fa-search me-3"></i>
         <i class="fa-solid fa-bell me-3"></i>
-        <img src="https://placehold.co/40x40/e53935/ffffff?text=U" alt="User" class="user-profile-img">
+        <img src="https://placehold.co/40x40/2196F3/ffffff?text=H" alt="Hospital" class="user-profile-img">
     </div>
 </nav>
 
+<!-- Main Navbar for Mobile (with sidebar trigger) -->
 <nav class="top-navbar d-flex d-lg-none justify-content-between align-items-center sticky-top">
     <a class="navbar-brand fw-bold" href="#">JeevanDaan+</a>
-    <button class="btn btn-link p-0" onclick="toggleSidebar()">
+    <button class="btn btn-link p-0" @click="toggleSidebar()">
         <i class="fas fa-bars fa-2x text-muted"></i>
     </button>
 </nav>
 
+<!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h5 class="fw-bold text-dark mb-0">Menu</h5>
-        <button class="btn btn-link p-0" onclick="toggleSidebar()">
+        <button class="btn btn-link p-0" @click="toggleSidebar()">
             <i class="fas fa-times fa-2x text-muted"></i>
         </button>
     </div>
@@ -60,16 +62,16 @@
     </ul>
 </div>
 
-<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div class="overlay" id="overlay" @click="toggleSidebar()"></div>
 
 <!-- Main Dashboard Content -->
 <div class="main-content container">
     <!-- User Profile Header Section -->
     <div class="user-header">
         <div class="d-flex align-items-center">
-            <img src="https://placehold.co/60x60/e53935/ffffff?text=U" alt="User Profile" class="rounded-circle me-3">
+            <img src="https://placehold.co/60x60/2196F3/ffffff?text=H" alt="Hospital Profile" class="rounded-circle me-3">
             <div>
-                <h4 class="fw-bold mb-0">Welcome Back, [User Name]!</h4>
+                <h4 class="fw-bold mb-0">Welcome Back, [Hospital Name]!</h4>
                 <p class="text-muted mb-0">Your profile is up to date.</p>
             </div>
         </div>
@@ -82,19 +84,19 @@
         <p class="text-muted mb-0">Give hope. Give life.</p>
     </div>
 
-    <!-- Buttons in Red Cards -->
+    <!-- Buttons in Blue Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-6">
-            <div class="dashboard-card bg-danger text-white text-center p-4">
+            <div class="dashboard-card bg-primary text-white text-center p-4">
                 <h5 class="card-title fw-bold mb-3">Need Help?</h5>
                 <p class="card-text">Raise a request for blood, plasma, or organs.</p>
                 <button class="btn btn-light mt-3 rounded-pill fw-bold">
-                    <i class="fa-solid fa-plus me-2"></i> Request for Help
+                    <i class="fa-solid fa-plus me-2"></i> Raise a Request
                 </button>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="dashboard-card bg-danger text-white text-center p-4">
+            <div class="dashboard-card bg-primary text-white text-center p-4">
                 <h5 class="card-title fw-bold mb-3">Manage Your Profile</h5>
                 <p class="card-text">Update your details and manage your account.</p>
                 <button class="btn btn-light mt-3 rounded-pill fw-bold">
@@ -107,67 +109,61 @@
     <!-- Available Requests Section -->
     <div class="dashboard-card mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Available Requests near you</h5>
-            <a href="#" class="btn btn-sm btn-outline-danger rounded-pill px-4">View Requests</a>
+            <h5 class="card-title mb-0">Available Donors near you</h5>
+            <a href="#" class="btn btn-sm btn-outline-primary rounded-pill px-4">View Donors</a>
         </div>
-        <p class="card-text text-muted mb-0">No active requests at the moment. Check back later!</p>
+        <p class="card-text text-muted mb-0">No active donors at the moment. Check back later!</p>
     </div>
 
-    <!-- Donation Cards -->
+    <!-- Request Cards -->
     <div class="row g-4">
-        <!-- Blood Donations Card -->
+        <!-- Blood Request Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card text-center">
                 <i class="fa-solid fa-droplet card-icon"></i>
-                <h5 class="card-title">Blood Donations</h5>
-                <p class="card-text">Manage your donation history and find blood camps.</p>
+                <h5 class="card-title">Blood Requests</h5>
+                <p class="card-text">Manage your blood requests and find local donors.</p>
                 <a href="#" class="btn btn-action mt-3">View Details</a>
             </div>
         </div>
 
-        <!-- Plasma Donations Card -->
+        <!-- Plasma Request Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card text-center">
                 <i class="fa-solid fa-syringe card-icon"></i>
-                <h5 class="card-title">Plasma Donations</h5>
-                <p class="card-text">Find info on plasma donation requirements and schedules.</p>
+                <h5 class="card-title">Plasma Requests</h5>
+                <p class="card-text">Manage your plasma requests and find local donors.</p>
                 <a href="#" class="btn btn-action mt-3">View Details</a>
             </div>
         </div>
 
-        <!-- Organ Donations Card -->
+        <!-- Organ Request Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card text-center">
                 <i class="fa-solid fa-heart-pulse card-icon"></i>
-                <h5 class="card-title">Organ Donations</h5>
-                <p class="card-text">Learn about organ donation and register your intent to donate.</p>
+                <h5 class="card-title">Organ Requests</h5>
+                <p class="card-text">Manage your organ requests and find registered donors.</p>
                 <a href="#" class="btn btn-action mt-3">View Details</a>
             </div>
         </div>
 
-        <!-- My Donations Card -->
+        <!-- My Requests Card -->
         <div class="col-md-6 col-lg-3">
             <div class="dashboard-card text-center">
                 <i class="fa-solid fa-hand-holding-medical card-icon"></i>
-                <h5 class="card-title">My Donations</h5>
-                <p class="card-text">Track the donation requests you have fulfilled or responded to.</p>
+                <h5 class="card-title">My Requests</h5>
+                <p class="card-text">Track your hospital's requests and their status.</p>
                 <a href="#" class="btn btn-action mt-3">View Contributions</a>
             </div>
         </div>
     </div>
 </div>
 
-
-
-
 </template>
-
-<script>
-    
-</script>
 <style>
         :root {
-            --primary-color: #e53935;
+            --primary-color: #2196F3; /* Hospital blue */
+            --brand-color: #e53935; /* JeevanDaan+ red */
             --secondary-color: #f7f9fc;
             --card-bg-color: #ffffff;
             --text-dark: #212529;
@@ -189,7 +185,7 @@
         
         .navbar-brand {
             font-weight: 700;
-            color: var(--primary-color) !important;
+            color: var(--brand-color) !important;
             font-size: 1.5rem;
         }
 
@@ -245,7 +241,7 @@
         }
 
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: #e53935;
+            background-color: var(--primary-color);
             color: #fff;
         }
 
@@ -295,7 +291,7 @@
             margin-bottom: 1rem;
         }
 
-        /* Footer */
+       
         
 
         /* Animations */
@@ -308,3 +304,16 @@
             }
         }
     </style>
+<script>
+    export default {
+        name : 'hospitaldash',
+
+    
+    methods : {
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+    }}}
+</script>
