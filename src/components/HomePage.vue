@@ -1,6 +1,6 @@
 <template>
 
-<head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JeevanDaan+ Landing Page</title>
@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+
 <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="#" style="color:#e53935; font-weight: bold;">
@@ -30,10 +30,10 @@
                     <a class="nav-link" href="#">Become a Donor</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Register Now</a>
+                    <router-link class="nav-link" to="/register">Register Now</router-link>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">View Donor Dashboard</a>
+                    <router-link class="nav-link" to="/login">Login</router-link>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="#">Learn More</a>
@@ -98,7 +98,7 @@
                     <h1 class="display-4 fw-bold">JeevanDaan+</h1>
                     <p class="lead">A life-saving act. A seamless connection. Your single action can save multiple patients. Donate blood, plasma, or organs today!</p>
                     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center justify-content-lg-center">
-                        <button type="button" class="btn btn-light rounded-pill px-4 py-2 me-sm-2 mb-2 mb-sm-0">Become a Donor</button>
+                        <button type="button" class="btn btn-light rounded-pill px-4 py-2 me-sm-2 mb-2 mb-sm-0"  >Become a Donor</button>
                         <button type="button" class="btn btn-outline-light rounded-pill px-4 py-2">Request Help</button>
                     </div>
                 </div>
