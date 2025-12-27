@@ -1,444 +1,288 @@
 <template>
-<nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#" style="color:#e53935; font-weight: bold;">
-            JeevanDaan+
-        </a>
-        <button class="btn btn-link d-lg-none p-0" type="button" onclick="toggleSidebar()">
-            <i class="fas fa-bars fa-2x text-muted"></i>
+<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-danger" href="#">JeevanDaan<span class="text-dark">+</span></a>
+        <button class="navbar-toggler shadow-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="#">Home</a>
-                </li>
-            
-                <li class="nav-item">
-                    <router-link class="nav-link" to="/hospital_login">Hospital Login</router-link>
+                    <router-link class="nav-link" to="#">Home</router-link>
                 </li>
                 <li class="nav-item">
-                    <router-link class="nav-link" to="/register">Register Now</router-link>
-                </li>
+                    <router-link class="nav-link" to="#">Learn More</router-link></li>
                 <li class="nav-item">
-                    <router-link class="nav-link" to="/login">Login</router-link>
-                </li>
+                    <router-link class="nav-link" to="/register">Join US</router-link></li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Learn More</a>
-                </li>
+                    <router-link class="nav-link" to="/partnersreg">Join as Partner</router-link></li>
             </ul>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-outline-danger me-2">Search hospitals</button>
-                <i class="fas fa-search fa-lg me-2 text-muted"></i>
-                <i class="fas fa-arrow-right-long fa-lg text-muted"></i>
+            <div class="d-flex flex-column flex-lg-row gap-2">
+                <router-link to="/login" class="btn btn-outline-danger btn-sm rounded-pill px-3">Login</router-link>
+                <router-link to="/partners_login" class="btn btn-danger btn-sm rounded-pill px-3 text-white">Partner Login</router-link>
             </div>
         </div>
     </div>
 </nav>
 
-<!-- Sidebar -->
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-header d-flex justify-content-between align-items-center">
-        <a class="navbar-brand" href="#" style="color: #e53935; font-weight: bold;">
-            JeevanDaan+
-        </a>
-        <button class="btn btn-link p-0" onclick="toggleSidebar()">
-            <i class="fas fa-times fa-2x text-muted"></i>
-        </button>
-    </div>
-    <div class="sidebar-body mt-4">
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <button class="btn btn-outline-danger">Search hospitals</button>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="#">Home</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Make a Request</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Become a Donor</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Register Now</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">View Donor Dashboard</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Learn More</a>
-            </li>
-        </ul>
-    </div>
-</div>
-
-<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-
-<!-- Header Section -->
-<div class="header-content pt-5 pb-5 ">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12 text-center">
-                <div class="p-3">
-                    <h1 class="display-4 fw-bold">JeevanDaan+</h1>
-                    <p class="lead">A life-saving act. A seamless connection. Your single action can save multiple patients. Donate blood, plasma, or organs today!</p>
-                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center justify-content-lg-center">
-                        <button type="button" class="btn btn-light rounded-pill px-4 py-2 me-sm-2 mb-2 mb-sm-0"  >Become a Donor</button>
-                        <button type="button" class="btn btn-outline-light rounded-pill px-4 py-2">Request Help</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Why Join Section -->
-<section class="section-why py-5">
+<section class="hero-section">
     <div class="container">
-        <div class="text-center">
-            <h2 class="display-6 mb-3">Why Join Jeevandaan+?</h2>
-            <p class="text-muted mb-5">We help you find a perfect match and make a difference. Our platform is a life-changing mission, saving lives since 2012.</p>
+        <h1 class="display-3 fw-bold mb-4">Donate Blood. Save Lives.</h1>
+        <p class="lead mb-5 px-md-5">Join a verified network of government & private blood banks for safe, real-time blood donation and emergency requests.</p>
+        <div class="d-flex flex-column flex-md-row justify-content-center gap-3">
+            <a href="#" class="btn btn-red shadow-lg">Register as Donor</a>
+            <a href="#" class="btn btn-outline-white">Find Blood Banks</a>
         </div>
-        <div class="row text-center g-4">
-            <!-- Donors Card -->
-            <div class="col-md-4">
-                <div class="feature-card bg-white p-4 h-100 d-flex flex-column justify-content-between">
-                    <div class="flex-grow-1">
-                        <i class="fas fa-heartbeat feature-icon mb-3"></i>
-                        <h3 class="h5 fw-bold text-dark">Donors</h3>
-                        <p class="text-muted">Seamlessly apply or donate blood, plasma, or organs. It is an act of empathy and compassion that will make a difference.</p>
-                    </div>
-                    <div>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill mt-3">Learn More</a>
-                    </div>
-                </div>
+    </div>
+</section>
+
+<section class="py-5 bg-white">
+    <div class="container py-5">
+        <h2 class="text-center fw-bold mb-5">How JeevanDaan+ Works</h2>
+        
+        <div class="row align-items-center mb-5">
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/blood-donation-center-4437142-3712217.png" class="work-sticker"></div>
+            <div class="col-md-6 text-center text-md-start">
+                <h4 class="fw-bold text-danger">Verified Partner Network</h4>
+                <p class="text-muted">Govt & private licensed blood banks with transparent charges and safe issue processes.</p>
             </div>
-            <!-- Hospitals Card -->
-            <div class="col-md-4">
-                <div class="feature-card bg-white p-4 h-100 d-flex flex-column justify-content-between">
-                    <div class="flex-grow-1">
-                        <i class="fas fa-hospital-user feature-icon mb-3"></i>
-                        <h3 class="h5 fw-bold text-dark">Hospitals</h3>
-                        <p class="text-muted">Streamline patient-donor matching and improve efficiency with our easy-to-use intuitive platform.</p>
-                    </div>
-                    <div>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill mt-3">Learn More</a>
-                    </div>
-                </div>
+        </div>
+
+        <div class="row align-items-center mb-5 flex-column-reverse flex-md-row">
+            <div class="col-md-6 text-center text-md-end">
+                <h4 class="fw-bold text-danger">Smart Emergency Requests</h4>
+                <p class="text-muted">Upload documents for instant verification. No middleman, just direct life-saving support.</p>
             </div>
-            <!-- Recipients Card -->
-            <div class="col-md-4">
-                <div class="feature-card bg-white p-4 h-100 d-flex flex-column justify-content-between">
-                    <div class="flex-grow-1">
-                        <i class="fas fa-users-line feature-icon mb-3"></i>
-                        <h3 class="h5 fw-bold text-dark">Recipients</h3>
-                        <p class="text-muted">Quickly find donors with a perfect match for blood, plasma, or organ needs. Our dedicated team is here to support you.</p>
-                    </div>
-                    <div>
-                        <a href="#" class="btn btn-sm btn-outline-danger rounded-pill mt-3">Learn More</a>
-                    </div>
-                </div>
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/blood-test-4437139-3712214.png" class="work-sticker"></div>
+        </div>
+
+        <div class="row align-items-center mb-5">
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/patient-safety-illustration-download-in-svg-png-gif-formats--security-medical-care-shield-hospital-pack-healthcare-illustrations-4715424.png" class="work-sticker"></div>
+            <div class="col-md-6 text-center text-md-start">
+                <h4 class="fw-bold text-danger">Donor Safety Model</h4>
+                <p class="text-muted">Privacy-first design. No direct contact with patients; manage everything via status buttons.</p>
+            </div>
+        </div>
+
+        <div class="row align-items-center mb-5 flex-column-reverse flex-md-row">
+            <div class="col-md-6 text-center text-md-end">
+                <h4 class="fw-bold text-danger">Real-Time Matching</h4>
+                <p class="text-muted">Location-based matching with reliability scoring for the fastest emergency response.</p>
+            </div>
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/location-matching-illustration-download-in-svg-png-gif-formats--search-find-gps-navigation-pack-maps-illustrations-5343467.png" class="work-sticker"></div>
+        </div>
+
+        <div class="row align-items-center mb-5">
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/blood-donation-camp-illustration-download-in-svg-png-gif-formats--donor-volunteer-help-community-pack-healthcare-illustrations-4715423.png" class="work-sticker"></div>
+            <div class="col-md-6 text-center text-md-start">
+                <h4 class="fw-bold text-danger">Donation Camps</h4>
+                <p class="text-muted">Multi-partner events and mass volunteer matching for scheduled community drives.</p>
+            </div>
+        </div>
+
+        <div class="row align-items-center mb-5 flex-column-reverse flex-md-row">
+            <div class="col-md-6 text-center text-md-end">
+                <h4 class="fw-bold text-danger">Transparent Stock</h4>
+                <p class="text-muted">Partner-managed daily updates ensure you never visit a bank with zero stock.</p>
+            </div>
+            <div class="col-md-6 text-center"><img src="https://cdni.iconscout.com/illustration/premium/thumb/inventory-management-illustration-download-in-svg-png-gif-formats--warehouse-stock-logistics-pack-business-illustrations-6419736.png" class="work-sticker"></div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-light overflow-hidden">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-5">How Donation Works</h2>
+        <div class="row g-0 flow-container">
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-bell"></i>
+                <h6 class="fw-bold">Donor Notified</h6>
+                <div class="flow-line"></div>
+            </div>
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-thumbs-up"></i>
+                <h6 class="fw-bold">Accepts Request</h6>
+                <div class="flow-line"></div>
+            </div>
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-hospital-user"></i>
+                <h6 class="fw-bold">Visits Partner</h6>
+                <div class="flow-line"></div>
+            </div>
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-hand-holding-medical"></i>
+                <h6 class="fw-bold">Donates Safely</h6>
+                <div class="flow-line"></div>
+            </div>
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-database"></i>
+                <h6 class="fw-bold">Stock Updated</h6>
+                <div class="flow-line"></div>
+            </div>
+            <div class="col-12 col-lg-2 flow-step">
+                <i class="fa-solid fa-medal"></i>
+                <h6 class="fw-bold">Recognition</h6>
+            </div>
+        </div>
+        
+        <div class="mt-5 p-4 border border-danger rounded-4 d-inline-block bg-white shadow-sm">
+            <h5 class="fw-bold text-danger mb-2"><i class="fa-solid fa-stethoscope me-2"></i>Quick Compatibility Check</h5>
+            <p class="mb-0 text-muted px-md-5">All donors must undergo a mandatory physical check for eligibility at the partner bank.</p>
+        </div>
+    </div>
+</section>
+
+<section class="impact-section text-center">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4"><span class="stat-number">25k+</span><p class="mt-2 fw-bold">Donors Registered</p></div>
+            <div class="col-md-4"><span class="stat-number">10k+</span><p class="mt-2 fw-bold">Lives Helped</p></div>
+            <div class="col-md-4"><span class="stat-number">450+</span><p class="mt-2 fw-bold">Partner Blood Banks</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-white">
+    <div class="container text-center py-5">
+        <h2 class="fw-bold mb-5 border-bottom pb-3 d-inline-block">Trust & Safety</h2>
+        <div class="row g-4 mt-3">
+            <div class="col-6 col-md-3"><i class="fa-solid fa-shield-halved trust-icon"></i><p class="small fw-bold">WHO & NACO Guidelines</p></div>
+            <div class="col-6 col-md-3"><i class="fa-solid fa-file-shield trust-icon"></i><p class="small fw-bold">Anti-Fraud Protection</p></div>
+            <div class="col-6 col-md-3"><i class="fa-solid fa-certificate trust-icon"></i><p class="small fw-bold">Licensed Partners Only</p></div>
+            <div class="col-6 col-md-3"><i class="fa-solid fa-lock trust-icon"></i><p class="small fw-bold">Secure Data Design</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="camp-carousel-container">
+    <div class="container">
+        <h3 class="text-center mb-4 fw-bold">Recent Blood Donation Camps</h3>
+        <div id="campCarousel" class="carousel slide carousel-fade shadow-lg rounded-4 overflow-hidden" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active"><img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=2000" class="d-block w-100"></div>
+                <div class="carousel-item"><img src="https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&q=80&w=2000" class="d-block w-100"></div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- How it Works Section -->
-<section class="section-works py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-6 mb-3">How it Works</h2>
-        </div>
-        <div class="row justify-content-center g-4">
-            <!-- Real time matching Card -->
-            <div class="col-md-8">
-                <div class="card p-4">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="fas fa-clock fa-2x text-danger me-3"></i>
-                        <h3 class="h5 mb-0 fw-bold">Real time matching</h3>
-                    </div>
-                    <p class="text-muted">Connect with donors and hospitals in real-time. Our matching algorithm connects you based on location, blood group, and other key data.</p>
-                </div>
-            </div>
-            <!-- Location Based Search Card -->
-            <div class="col-md-8">
-                <div class="card p-4">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="fas fa-map-marker-alt fa-2x text-danger me-3"></i>
-                        <h3 class="h5 mb-0 fw-bold">Location Based Search</h3>
-                    </div>
-                    <p class="text-muted">Find nearby donors and hospitals with our location-based matching API. Get a clearer picture of who is available to help you.</p>
-                </div>
-            </div>
-            <!-- Actionable Analytics Card -->
-            <div class="col-md-8">
-                <div class="card p-4">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="fas fa-chart-line fa-2x text-danger me-3"></i>
-                        <h3 class="h5 mb-0 fw-bold">Actionable Analytics</h3>
-                    </div>
-                    <p class="text-muted">Leverage real-time data to make informed decisions. Our dashboard provides detailed insights into donor-recipient availability, and regional needs.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Our Impact Section -->
-<section class="section-impact py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-6 mb-3">Our Impact by numbers</h2>
-            <p class="text-muted">Every day, we're changing lives. Our numbers tell our story of hope and compassion.</p>
-        </div>
-        <div class="row text-center g-4 justify-content-center">
-            <div class="col-sm-6 col-lg-3">
-                <div class="stats-card p-4">
-                    <h3 class="display-5 fw-bold text-danger">3,450+</h3>
-                    <p class="text-muted">Successful Requests</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stats-card p-4">
-                    <h3 class="display-5 fw-bold text-primary">1,200+</h3>
-                    <p class="text-muted">Successful Donors</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stats-card p-4">
-                    <h3 class="display-5 fw-bold text-success">50+</h3>
-                    <p class="text-muted">Partner Hospitals</p>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stats-card p-4">
-                    <h3 class="display-5 fw-bold text-warning">95%</h3>
-                    <p class="text-muted">Request Success Rate</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- What Our Community Says Section -->
-<section class="section-people py-5">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-6 mb-3">What Our Community Says</h2>
-            <p class="text-muted">Read stories of hope and courage from people who have been helped by JeevanDaan+</p>
-        </div>
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card p-4 shadow-sm border-0">
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="https://placehold.co/60x60/e53935/ffffff?text=SJ" class="rounded-circle me-3" alt="Sanjay A.">
-                        <div>
-                            <h4 class="h6 mb-0 fw-bold">Sanjay A.</h4>
-                            <p class="text-muted small mb-0">Patient's relative</p>
+<section class="py-5 bg-light">
+    <div class="container py-5 text-center">
+        <h2 class="fw-bold mb-5">Voices of Our Lifesavers</h2>
+        <div id="reviewCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card border-0 shadow-sm p-4 rounded-4">
+                                <i class="fa-solid fa-quote-left text-danger opacity-25 fs-1 mb-3"></i>
+                                <p class="lead italic">"JeevanDaan+ made the donation process so transparent. Truly rewarding!"</p>
+                                <h6 class="fw-bold mb-0">Arjun Sharma</h6>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-muted fst-italic">"I was in a desperate situation. Thanks to JeevanDaan+ I found a donor in a few hours and my patient is a lot better."</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- CTA Section -->
-<section class="section-cta py-5">
-    <div class="container text-center">
-        <h2 class="display-6 fw-bold mb-3">Your Act of Kindness Can Change the World!</h2>
-        <p class="lead mb-4">Join the community of donors. Be a bridge of hope, one donation at a time.</p>
-        <button class="btn btn-light rounded-pill px-5 py-3 fw-bold">Become a Donor Now</button>
+<section class="py-5 bg-white text-center">
+    <div class="container py-5" style="background: linear-gradient(rgba(230, 57, 70, 0.9), rgba(193, 18, 31, 1)); padding: 60px; border-radius: 20px; color: white;">
+        <h2 class="display-5 fw-bold mb-4">Become a Lifesaver Today.</h2>
+        <div class="d-flex flex-column flex-md-row justify-content-center gap-3">
+            <button class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-danger">Join as Donor</button>
+            <button class="btn btn-outline-white btn-lg rounded-pill px-4">Organize a Blood Camp</button>
+        </div>
     </div>
 </section>
+
 
 
 </template>
-
-<script >
-  export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
-}
-
-    
-</script>
-
-
 <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fc;
-            overflow-x: hidden;
+        :root {
+            --jd-red: #E63946;
+            --jd-dark-red: #C1121F;
+            --jd-white: #FFFFFF;
+            --jd-light-bg: #F8F9FA;
         }
 
-        .navbar-brand img {
-            height: 40px;
-        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow-x: hidden; }
 
-        /* Sidebar Styling */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -300px;
-            width: 250px;
-            height: 100%;
-            background-color: #fff;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            transition: left 0.3s ease;
-            z-index: 1050;
-        }
+        /* NAVBAR STYLING */
+        .navbar-brand { font-size: 1.5rem; letter-spacing: -1px; }
+        .nav-link { font-weight: 500; color: #333 !important; margin: 0 5px; transition: 0.3s; }
+        .nav-link:hover { color: var(--jd-red) !important; }
 
-        .sidebar.show {
-            left: 0;
-        }
-
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-            z-index: 1040;
-        }
-
-        .overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .sidebar-header {
-            background-color: #fff;
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .sidebar .nav-link {
-            padding: 1rem 1.5rem;
-            color: #333;
-            font-weight: 500;
-        }
-
-        .sidebar .nav-link.active,
-        .sidebar .nav-link:hover {
-            color: #e53935;
-            background-color: #fcebeb;
-        }
-
-        /* Header Content */
-        .header-content {
-            background-color: #e53935;
+        /* HERO SECTION */
+        .hero-section {
+            background: linear-gradient(90deg, rgba(230, 57, 70, 0.9) 0%, rgba(193, 18, 31, 0.7) 100%), 
+                url('https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+            padding: 100px 0;
             color: white;
+            text-align: center;
         }
 
-        .header-content .btn {
-            background-color: white;
-            color: #e53935;
-            font-weight: 600;
-        }
-        
-        .header-content h1 {
-            font-weight: 700;
-        }
-        
-        /* Sections */
-        .section-why {
-            background-color: white;
+        .btn-red { background: var(--jd-red); color: white; font-weight: 600; border-radius: 50px; padding: 12px 30px; border: none; }
+        .btn-red:hover { background: var(--jd-dark-red); color: white; }
+        .btn-outline-white { background: transparent; color: white; font-weight: 600; border-radius: 50px; padding: 12px 30px; border: 2px solid white; }
+        .btn-outline-white:hover { background: white; color: var(--jd-red); }
+
+        /* HOW IT WORKS STICKERS */
+        .work-sticker { max-width: 220px; width: 100%; height: auto; }
+
+        /* RESPONSIVE DONOR FLOW SYSTEM */
+        .flow-container { position: relative; }
+        .flow-step { text-align: center; position: relative; padding: 20px; z-index: 2; }
+        .flow-step i { 
+            font-size: 2.2rem; 
+            color: var(--jd-red); 
+            background: white; 
+            padding: 15px; 
+            border-radius: 50%; 
+            box-shadow: 0 5px 15px rgba(230, 57, 70, 0.2);
+            margin-bottom: 15px; 
         }
 
-        .section-why h2, .section-works h2, .section-impact h2, .section-people h2 {
-            color: #e53935;
-            font-weight: 700;
-        }
-
-        .feature-card {
-            border-radius: 1rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            color: #e53935;
-        }
-        
-        .section-works .card {
-            border: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            border-radius: 1rem;
-        }
-        
-        .section-impact .stats-card {
-            border-left: 5px solid #e53935;
-            background-color: #fff;
-            border-radius: 0.5rem;
-        }
-        
-        .section-impact .stats-card:nth-child(2) { border-color: #007bff; }
-        .section-impact .stats-card:nth-child(3) { border-color: #28a745; }
-        .section-impact .stats-card:nth-child(4) { border-color: #ffc107; }
-
-        .section-cta {
-            background-color: #e53935;
-            color: white;
-        }
-        
-        /* Animation CSS */
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        /* Desktop Arrows (Horizontal) */
+        @media (min-width: 992px) {
+            .flow-line { 
+                position: absolute; 
+                top: 40px; 
+                right: -25%; 
+                width: 50%; 
+                border-top: 3px dashed var(--jd-red); 
+                opacity: 0.3;
+                z-index: 1;
             }
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+        /* Mobile Arrows (Vertical) */
+        @media (max-width: 991px) {
+            .flow-step { margin-bottom: 40px; }
+            .flow-step:not(:last-child)::after {
+                content: '\f063'; /* FontAwesome Down Arrow */
+                font-family: "Font Awesome 6 Free";
+                font-weight: 900;
+                position: absolute;
+                bottom: -35px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 1.5rem;
+                color: var(--jd-red);
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
-        /* Applying animations to sections */
-        .navbar {
-            animation: fadeInDown 0.8s ease-out forwards;
-        }
+        /* IMPACT SECTION */
+        .impact-section { background: var(--jd-red); color: white; padding: 80px 0; }
+        .stat-number { font-size: 3.5rem; font-weight: 800; line-height: 1; }
 
-        .header-content {
-            animation: fadeInUp 0.8s ease-out forwards;
-            animation-delay: 0.2s;
-            opacity: 0; /* Initial state */
-        }
-
-        .section-why, .section-works, .section-impact, .section-people, .section-cta {
-            animation: fadeInUp 1s ease-out forwards;
-            opacity: 0;
-        }
+        /* TRUST SECTION */
+        .trust-icon { font-size: 40px; color: var(--jd-red); margin-bottom: 15px; }
         
-        .section-why { animation-delay: 0.4s; }
-        .section-works { animation-delay: 0.6s; }
-        .section-impact { animation-delay: 0.8s; }
-        .section-people { animation-delay: 1s; }
-        .section-cta { animation-delay: 1.2s; }
+        /* CAMP CAROUSEL */
+        .carousel-item img { height: 450px; object-fit: cover; border-radius: 15px; }
     </style>

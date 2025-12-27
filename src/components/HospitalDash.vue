@@ -160,7 +160,7 @@
 </div>
 
 </template>
-<style>
+<style scoped>
         :root {
             --primary-color: #2196F3; /* Hospital blue */
             --brand-color: #e53935; /* JeevanDaan+ red */

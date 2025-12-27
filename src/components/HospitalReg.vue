@@ -9,7 +9,7 @@
 
         <div class="col-md-7 login-side">
             <div class="brand-logo">
-                <i class="fa-solid fa-hospital-user"></i> JeevanDaan+ <span class="badge bg-primary fs-6">HOSPITAL</span>
+                <i class="fa-solid fa-hospital-user"></i> JeevanDaan+ <span class="badge bg-primary fs-6">PARTNERS</span>
             </div>
             <h2 class="fw-bold">Facility Registration</h2>
             <p class="text-muted small mb-4">Join the network to manage donor requests and emergency supplies.</p>
@@ -45,7 +45,7 @@
                                 <option>Government</option>
                                 <option>Private Multi-specialty</option>
                                 <option>Blood Bank</option>
-                                <option>Organ Retrieval Center</option>
+                                
                             </select>
                         </div>
                     </div>
@@ -69,12 +69,12 @@
                 <div class="form-check mb-4">
                     <input class="form-check-input" type="checkbox" id="hTerms" required>
                     <label class="form-check-label text-muted small" for="hTerms">
-                        We agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#hospModal" class="text-primary fw-bold text-decoration-none">Hospital Partner Terms</a>
+                        We agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#hospModal" class="text-primary fw-bold text-decoration-none">Partner Terms</a>
                     </label>
                 </div>
 
                 <button type="submit" class="btn-hospital">Register Facility</button>
-                <p class="text-center mt-3 text-muted small">Already registered? <a href="#" class="text-primary fw-bold text-decoration-none">Hospital Login</a></p>
+                <p class="text-center mt-3 text-muted small">Already registered? <a href="#" class="text-primary fw-bold text-decoration-none">Partner Login</a></p>
             </form>
         </div>
     </div>
@@ -84,7 +84,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow" style="border-radius: 20px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Hospital Terms of Use</h5>
+                <h5 class="modal-title fw-bold">Partners Terms of Use</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-muted small">

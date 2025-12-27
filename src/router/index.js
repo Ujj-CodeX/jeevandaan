@@ -3,9 +3,9 @@ import Home from '../components/HomePage.vue'
 import user from '../components/UserDash.vue'
 import loginpage from '../components/Login.vue'
 import register from '@/components/Register.vue'
-import hospitaldash from '@/components/HospitalDash.vue'
-import hospitalreg from '@/components/HospitalReg.vue'
-import hospitallogin from '@/components/HospitalLogin.vue'
+import partnersdash from '@/components/HospitalDash.vue'
+import partnersreg from '@/components/HospitalReg.vue'
+import partnerslogin from '@/components/HospitalLogin.vue'
 
 
 
@@ -14,7 +14,8 @@ const routes =[
     {
         path:'/',
         name: 'Home',
-        component : Home
+        component : Home,
+        meta: { title :  'JeevanDaan+ | India’s Smart Blood Donation Platform' }
     },
     {
         path:'/User',
@@ -35,24 +36,24 @@ const routes =[
 
     },
     {
-        path:'/hospitaldash',
-        name: 'hospitaldash',
-        component : hospitaldash,
-        meta: { hideFooter: true ,title: 'JeevanDaan+ | Hospital'}
+        path:'/partnersdash',
+        name: 'partnersdash',
+        component : partnersdash,
+        meta: { hideFooter: true ,title: 'JeevanDaan+ | Partner'}
 
     },
     {
-        path:'/hospitalreg',
-        name: 'hospitalreg',
-        component : hospitalreg,
-        meta: { hideFooter: true ,title: 'JeevanDaan+ | Hospital | Register'}
+        path:'/partnersreg',
+        name: 'partnersreg',
+        component : partnersreg,
+        meta: { hideFooter: true ,title: 'JeevanDaan+ | Partner | Register'}
 
     },
     {
-        path:'/hospital_login',
-        name: 'hospital_login',
-        component : hospitallogin,
-        meta: { hideFooter: true ,title: 'JeevanDaan+ | Hospital | Login'}
+        path:'/partners_login',
+        name: 'partners_login',
+        component : partnerslogin,
+        meta: { hideFooter: true ,title: 'JeevanDaan+ | Partner | Login'}
 
     }
 

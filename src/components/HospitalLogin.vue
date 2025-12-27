@@ -5,7 +5,7 @@
             <img src="https://img.freepik.com/free-vector/hospital-building-concept-illustration_114360-8440.jpg" alt="Login" style="width: 100%;">
         </div>
         <div class="col-md-7 login-side">
-            <h3 class="fw-bold text-primary mb-1">Hospital Portal</h3>
+            <h3 class="fw-bold text-primary mb-1">Partners Portal</h3>
             <p class="text-muted small mb-4">Secure access for medical administrators.</p>
             <form>
                 <div class="input-group-custom">
