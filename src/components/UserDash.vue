@@ -1,5 +1,58 @@
 
     <style>
+        /* PARTNER REQUESTS CENTER SPECIFIC */
+.request-count-badge {
+    background: var(--jd-red);
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 50px;
+    vertical-align: middle;
+}
+
+.partner-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    border: 2px solid var(--jd-soft-red);
+}
+
+.partner-avatar:hover {
+    transform: scale(1.1);
+}
+
+/* Side Panel / Right Modal */
+.offcanvas {
+    border-top-left-radius: 30px;
+    border-bottom-left-radius: 30px;
+    border: none;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+}
+
+.map-placeholder {
+    height: 150px;
+    background: #e9ecef;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    background-image: url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=400');
+    background-size: cover;
+}
+
+.priority-emergency { background-color: #ffeded; color: #e63946; border: 1px solid #ffcfcf; }
+.priority-high { background-color: #fff4e5; color: #f39c12; border: 1px solid #ffe8cc; }
+
+@media (max-width: 768px) {
+    .offcanvas {
+        border-radius: 30px 30px 0 0 !important;
+        height: 80% !important;
+        width: 100% !important;
+    }
+}
         :root {
             --jd-red: #E63946;
             --jd-dark-red: #C1121F;
@@ -92,8 +145,11 @@
         </button>
         <div class="collapse navbar-collapse" id="dashboardNav">
             <ul class="navbar-nav mx-auto">
-                <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Raise a Request</a></li>
+                <li class="nav-item">
+                    <RouterLink class="nav-link active" to="/">Home</RouterLink>
+                </li>
+                <li class="nav-item">
+                    <RouterLink class="nav-link" to="/user_request">Raise a Request</RouterLink></li>
                 <li class="nav-item"><a class="nav-link" href="#">Learn More</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Logout</a></li>
             </ul>
@@ -149,6 +205,148 @@
 
     <div class="row">
         <div class="col-lg-8">
+
+            <div class="mt-5 mb-4">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+            <h5 class="fw-bold mb-0">Pending Partner Requests <span class="request-count-badge ms-2">3 Pending</span></h5>
+            <p class="text-muted small mb-0">Requests raised by hospitals & partner organizations</p>
+        </div>
+        <div class="pill-toggle d-none d-md-flex">
+            <button class="pill-btn active">All</button>
+            <button class="pill-btn">Emergency</button>
+            <button class="pill-btn">Normal</button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="jd-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="https://ui-avatars.com/api/?name=City+General&background=E63946&color=fff" 
+                             class="partner-avatar" 
+                             data-bs-toggle="offcanvas" 
+                             data-bs-target="#partnerDetailModal" 
+                             alt="Partner">
+                        <div>
+                            <h6 class="fw-bold mb-0">City General Hospital</h6>
+                            <span class="text-muted" style="font-size: 0.7rem;">Requested 2 hrs ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <p class="small text-muted mb-2">
+                        <i class="fa-solid fa-location-dot me-2 text-danger"></i>Green Park, Delhi • 1.2 km away
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill priority-emergency">Emergency</span>
+                        <span class="badge rounded-pill bg-light text-dark border">3 Units • O+</span>
+                        <span class="badge rounded-pill bg-light text-dark border">Platelets</span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
+                    <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="jd-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="https://ui-avatars.com/api/?name=St+Jude&background=f8f9fa&color=2d3436" 
+                             class="partner-avatar" 
+                             data-bs-toggle="offcanvas" 
+                             data-bs-target="#partnerDetailModal" 
+                             alt="Partner">
+                        <div>
+                            <h6 class="fw-bold mb-0">St. Jude Medical Center</h6>
+                            <span class="text-muted" style="font-size: 0.7rem;">Requested 5 hrs ago</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <p class="small text-muted mb-2">
+                        <i class="fa-solid fa-location-dot me-2 text-danger"></i>Okhla Phase III • 4.5 km away
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill priority-high">High Priority</span>
+                        <span class="badge rounded-pill bg-light text-dark border">1 Unit • B-</span>
+                        <span class="badge rounded-pill bg-light text-dark border">Whole Blood</span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
+                    <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="partnerDetailModal" aria-labelledby="partnerDetailModalLabel">
+    <div class="offcanvas-header p-4 pb-0">
+        <h5 class="offcanvas-title fw-bold" id="partnerDetailModalLabel">Partner Profile</h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-4">
+        <div class="text-center mb-4">
+            <img src="https://ui-avatars.com/api/?name=City+General&background=E63946&color=fff" class="rounded-circle mb-3" width="80" alt="Partner">
+            <h4 class="fw-bold mb-1">City General Hospital <i class="fa-solid fa-circle-check text-primary ms-1" style="font-size: 1rem;"></i></h4>
+            <div class="text-warning mb-2">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star-half-stroke"></i>
+                <span class="text-muted ms-1">(4.8)</span>
+            </div>
+            <p class="text-muted small">Licensed Blood Bank • Est. 1995</p>
+        </div>
+
+        <div class="mb-4">
+            <h6 class="fw-bold small text-uppercase text-muted mb-3">Location</h6>
+            <div class="map-placeholder mb-2">
+                <i class="fa-solid fa-map-location-dot fs-2"></i>
+            </div>
+            <p class="small mb-0">122, Main Ring Road, Green Park, New Delhi, 110016</p>
+        </div>
+
+        <div class="mb-4">
+            <h6 class="fw-bold small text-uppercase text-muted mb-3">Contact Details</h6>
+            <div class="p-3 bg-light rounded-4">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fa-solid fa-phone me-3 text-danger"></i>
+                    <span class="small">+91 11 2345 6789</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-envelope me-3 text-danger"></i>
+                    <span class="small">emergency@cityhospital.com</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h6 class="fw-bold small text-uppercase text-muted mb-3">Request History</h6>
+            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                <span class="small">Units Requested (30 Days)</span>
+                <span class="fw-bold">142</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-2">
+                <span class="small">Successful Fulfilment</span>
+                <span class="text-success fw-bold">96%</span>
+            </div>
+        </div>
+
+        <button class="btn btn-danger w-100 rounded-pill py-3 fw-bold mt-2">Contact Organization</button>
+    </div>
+</div>
             
             <div class="jd-card p-4">
                 <div class="calendar-header">
@@ -173,6 +371,8 @@
                     <button class="btn btn-danger btn-sm rounded-pill px-4">Register Slot</button>
                 </div>
             </div>
+
+            
 
             <h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
             <div class="camp-slider mb-4">
