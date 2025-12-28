@@ -6,6 +6,8 @@ import register from '@/components/Register.vue'
 import partnersdash from '@/components/HospitalDash.vue'
 import partnersreg from '@/components/HospitalReg.vue'
 import partnerslogin from '@/components/HospitalLogin.vue'
+import request1 from '@/components/Request1.vue'
+
 
 
 
@@ -55,7 +57,15 @@ const routes =[
         component : partnerslogin,
         meta: { hideFooter: true ,title: 'JeevanDaan+ | Partner | Login'}
 
+    },
+    {
+        path:'/user_request',
+        name: 'request1',
+        component : request1,
+        meta: { title: 'JeevanDaan+ | Blood | Request'}
+
     }
+
 
     
 

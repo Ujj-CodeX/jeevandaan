@@ -1,310 +1,275 @@
-<template>
-    <nav class="top-navbar d-none d-lg-flex justify-content-between align-items-center sticky-top">
-    <a class="navbar-brand fw-bold" href="#">JeevanDaan+</a>
-    <ul class="nav">
-        <li class="nav-item">
-            <a class="nav-link text-dark" href="#">Home</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-dark" href="#">Raise a Request</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-dark" href="#">Log out</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-dark" href="#">Learn More</a>
-        </li>
-    </ul>
-    <div class="d-flex align-items-center">
-        <i class="fas fa-search me-3"></i>
-        <i class="fa-solid fa-bell me-3"></i>
-        <img src="https://placehold.co/40x40/e53935/ffffff?text=U" alt="User" class="user-profile-img">
-    </div>
-</nav>
 
-<nav class="top-navbar d-flex d-lg-none justify-content-between align-items-center sticky-top">
-    <a class="navbar-brand fw-bold" href="#">JeevanDaan+</a>
-    <button class="btn btn-link p-0" onclick="toggleSidebar()">
-        <i class="fas fa-bars fa-2x text-muted"></i>
-    </button>
-</nav>
-
-<div class="sidebar" id="sidebar">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="fw-bold text-dark mb-0">Menu</h5>
-        <button class="btn btn-link p-0" onclick="toggleSidebar()">
-            <i class="fas fa-times fa-2x text-muted"></i>
-        </button>
-    </div>
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link active" href="#">
-                <i class="fas fa-home me-2"></i> Dashboard
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">
-                <i class="fas fa-hand-holding-medical me-2"></i> Raise a Request
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">
-                <i class="fas fa-cog me-2"></i> Account Settings
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#">
-                <i class="fas fa-sign-out-alt me-2"></i> Log Out
-            </a>
-        </li>
-    </ul>
-</div>
-
-<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-
-<!-- Main Dashboard Content -->
-<div class="main-content container">
-    <!-- User Profile Header Section -->
-    <div class="user-header">
-        <div class="d-flex align-items-center">
-            <img src="https://placehold.co/60x60/e53935/ffffff?text=U" alt="User Profile" class="rounded-circle me-3">
-            <div>
-                <h4 class="fw-bold mb-0">Welcome Back, [User Name]!</h4>
-                <p class="text-muted mb-0">Your profile is up to date.</p>
-            </div>
-        </div>
-        <i class="fa-solid fa-bell fa-2x text-muted"></i>
-    </div>
-    
-    <!-- Be the reason someone lives today section -->
-    <div class="welcome-section">
-        <h2 class="fw-bold mb-1">Be the reason someone lives today</h2>
-        <p class="text-muted mb-0">Give hope. Give life.</p>
-    </div>
-
-    <!-- Buttons in Red Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="dashboard-card bg-danger text-white text-center p-4">
-                <h5 class="card-title fw-bold mb-3">Need Help?</h5>
-                <p class="card-text">Raise a request for blood, plasma, or organs.</p>
-                <button class="btn btn-light mt-3 rounded-pill fw-bold">
-                    <i class="fa-solid fa-plus me-2"></i> Request for Help
-                </button>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="dashboard-card bg-danger text-white text-center p-4">
-                <h5 class="card-title fw-bold mb-3">Manage Your Profile</h5>
-                <p class="card-text">Update your details and manage your account.</p>
-                <button class="btn btn-light mt-3 rounded-pill fw-bold">
-                    <i class="fa-solid fa-gear me-2"></i> Account Settings
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Available Requests Section -->
-    <div class="dashboard-card mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Available Requests near you</h5>
-            <a href="#" class="btn btn-sm btn-outline-danger rounded-pill px-4">View Requests</a>
-        </div>
-        <p class="card-text text-muted mb-0">No active requests at the moment. Check back later!</p>
-    </div>
-
-    <!-- Donation Cards -->
-    <div class="row g-4">
-        <!-- Blood Donations Card -->
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-card text-center">
-                <i class="fa-solid fa-droplet card-icon"></i>
-                <h5 class="card-title">Blood Donations</h5>
-                <p class="card-text">Manage your donation history and find blood camps.</p>
-                <a href="#" class="btn btn-action mt-3">View Details</a>
-            </div>
-        </div>
-
-        <!-- Plasma Donations Card -->
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-card text-center">
-                <i class="fa-solid fa-syringe card-icon"></i>
-                <h5 class="card-title">Plasma Donations</h5>
-                <p class="card-text">Find info on plasma donation requirements and schedules.</p>
-                <a href="#" class="btn btn-action mt-3">View Details</a>
-            </div>
-        </div>
-
-        <!-- Organ Donations Card -->
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-card text-center">
-                <i class="fa-solid fa-heart-pulse card-icon"></i>
-                <h5 class="card-title">Organ Donations</h5>
-                <p class="card-text">Learn about organ donation and register your intent to donate.</p>
-                <a href="#" class="btn btn-action mt-3">View Details</a>
-            </div>
-        </div>
-
-        <!-- My Donations Card -->
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-card text-center">
-                <i class="fa-solid fa-hand-holding-medical card-icon"></i>
-                <h5 class="card-title">My Donations</h5>
-                <p class="card-text">Track the donation requests you have fulfilled or responded to.</p>
-                <a href="#" class="btn btn-action mt-3">View Contributions</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-
-</template>
-
-<script>
-    
-</script>
-<style>
+    <style>
         :root {
-            --primary-color: #e53935;
-            --secondary-color: #f7f9fc;
-            --card-bg-color: #ffffff;
-            --text-dark: #212529;
-            --text-muted: #6c757d;
+            --jd-red: #E63946;
+            --jd-dark-red: #C1121F;
+            --jd-soft-red: #fff5f5;
+            --jd-gray: #f8f9fa;
+            --jd-border-radius: 20px;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--secondary-color);
-            min-height: 100vh;
+            background-color: #fcfcfc;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #2d3436;
         }
 
-        /* Top Navbar */
-        .top-navbar {
-            background-color: var(--card-bg-color);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            padding: 1rem 2rem;
-        }
-        
-        .navbar-brand {
-            font-weight: 700;
-            color: var(--primary-color) !important;
-            font-size: 1.5rem;
+        /* NAVBAR */
+        .navbar { background: white; border-bottom: 1px solid #eee; padding: 15px 0; }
+        .nav-link { font-weight: 500; color: #636e72 !important; margin: 0 10px; }
+        .nav-link:hover, .nav-link.active { color: var(--jd-red) !important; }
+        .nav-icon { font-size: 1.2rem; color: #636e72; position: relative; }
+        .notification-dot {
+            position: absolute; top: 0; right: 0; width: 8px; height: 8px;
+            background: var(--jd-red); border-radius: 50%; border: 2px solid white;
         }
 
-        .user-profile-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
+        /* CARDS */
+        .jd-card {
+            background: white; border: none; border-radius: var(--jd-border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03); transition: transform 0.3s ease;
+            margin-bottom: 24px;
+        }
+        .jd-card:hover { transform: translateY(-5px); }
+
+        /* HEADER & BADGES */
+        .donor-badge {
+            background: linear-gradient(135deg, #ffd700, #ffae00);
+            color: white; padding: 5px 15px; border-radius: 50px; font-weight: 600; font-size: 0.8rem;
         }
 
-        /* Side Navbar for small screens */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -300px;
-            width: 250px;
-            height: 100%;
-            background-color: var(--card-bg-color);
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            transition: left 0.3s ease;
-            z-index: 1050;
-            padding: 1.5rem;
+        /* STAT CARDS */
+        .stat-card { padding: 25px; text-align: center; }
+        .stat-icon { 
+            width: 50px; height: 50px; background: var(--jd-soft-red); 
+            color: var(--jd-red); border-radius: 15px; display: flex;
+            align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 1.5rem;
         }
 
-        .sidebar.show {
-            left: 0;
+        /* CALENDAR UI */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .pill-toggle { background: var(--jd-gray); border-radius: 50px; padding: 5px; display: inline-flex; }
+        .pill-btn { border: none; background: none; padding: 6px 18px; border-radius: 50px; font-size: 0.85rem; transition: 0.3s; }
+        .pill-btn.active { background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); color: var(--jd-red); font-weight: 600; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .day-cell { height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; font-size: 0.9rem; position: relative; }
+        .day-cell.active-camp::after {
+            content: ''; width: 6px; height: 6px; background: var(--jd-red); 
+            border-radius: 50%; position: absolute; bottom: 10px;
+        }
+        .day-cell:hover { background: var(--jd-soft-red); cursor: pointer; }
+
+        /* SLIDER (NETFLIX STYLE) */
+        .camp-slider { display: flex; overflow-x: auto; gap: 20px; padding-bottom: 15px; scrollbar-width: none; }
+        .camp-slider::-webkit-scrollbar { display: none; }
+        .camp-card { min-width: 280px; background: white; border-radius: 18px; overflow: hidden; border: 1px solid #f0f0f0; }
+        .camp-img { height: 140px; background-size: cover; background-position: center; }
+
+        /* EMERGENCY REQUEST */
+        .emergency-banner {
+            background: linear-gradient(135deg, var(--jd-red), var(--jd-dark-red));
+            color: white; border-radius: var(--jd-border-radius); padding: 30px;
         }
 
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-            z-index: 1040;
-        }
-
-        .overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .sidebar .nav-link {
-            padding: 0.75rem 1rem;
-            color: var(--text-dark);
-            font-weight: 500;
-            border-radius: 0.75rem;
-            transition: background-color 0.2s ease;
-        }
-
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: #e53935;
-            color: #fff;
-        }
-
-        /* Main Dashboard Content */
-        .main-content {
-            padding: 2rem;
-            animation: fadeIn 0.8s ease-out forwards;
-        }
-        
-        .user-header {
-            background-color: var(--card-bg-color);
-            border-radius: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .welcome-section {
-            background-color: var(--card-bg-color);
-            border-radius: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .dashboard-card {
-            background-color: var(--card-bg-color);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            height: 100%;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-icon {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        /* Footer */
-        
-
-        /* Animations */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+        /* ELIGIBILITY CIRCLE */
+        .eligibility-check {
+            border: 4px solid #00b894; width: 100px; height: 100px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: #00b894; margin: 0 auto 15px;
         }
     </style>
+
+
+
+<template>
+
+<nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-danger" href="#">JeevanDaan<span class="text-dark">+</span></a>
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="dashboardNav">
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Raise a Request</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Learn More</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Logout</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-4">
+                <a href="#" class="nav-icon"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></a>
+                <a href="#" class="nav-icon"><i class="fa-regular fa-circle-user"></i></a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <header class="row align-items-center mb-5">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-1">Hi, Rahul Sharma 👋</h2>
+            <p class="text-muted">Your Lifesaver Dashboard | <span class="text-danger fw-medium">Every donation saves a life.</span></p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <span class="donor-badge shadow-sm"><i class="fa-solid fa-crown me-2"></i>Gold Member</span>
+        </div>
+    </header>
+
+    <div class="row g-4 mb-2">
+        <div class="col-6 col-lg-3">
+            <div class="jd-card stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
+                <h6 class="text-muted small mb-1">Next Eligible</h6>
+                <p class="fw-bold mb-0">12 Oct 2024</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="jd-card stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
+                <h6 class="text-muted small mb-1">Total Donations</h6>
+                <p class="fw-bold mb-0">12 Units</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="jd-card stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                <h6 class="text-muted small mb-1">Lives Impacted</h6>
+                <p class="fw-bold mb-0">36 People</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="jd-card stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-shield-check"></i></div>
+                <h6 class="text-muted small mb-1">Reliability</h6>
+                <p class="fw-bold mb-0 text-success">98 Score</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            
+            <div class="jd-card p-4">
+                <div class="calendar-header">
+                    <h5 class="fw-bold mb-0">Donation Camp Calendar</h5>
+                    <div class="pill-toggle">
+                        <button class="pill-btn active">Month</button>
+                        <button class="pill-btn">Week</button>
+                        <button class="pill-btn">List</button>
+                    </div>
+                </div>
+                <div class="calendar-grid text-center mb-3">
+                    <div class="text-muted small fw-bold">Mon</div><div class="text-muted small fw-bold">Tue</div><div class="text-muted small fw-bold">Wed</div><div class="text-muted small fw-bold">Thu</div><div class="text-muted small fw-bold">Fri</div><div class="text-muted small fw-bold">Sat</div><div class="text-muted small fw-bold">Sun</div>
+                    <div class="day-cell text-muted">28</div><div class="day-cell text-muted">29</div><div class="day-cell text-muted">30</div><div class="day-cell">1</div><div class="day-cell active-camp">2</div><div class="day-cell">3</div><div class="day-cell">4</div>
+                    <div class="day-cell">5</div><div class="day-cell active-camp">6</div><div class="day-cell">7</div><div class="day-cell">8</div><div class="day-cell">9</div><div class="day-cell active-camp">10</div><div class="day-cell">11</div>
+                </div>
+                <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-danger rounded-pill mb-1">Recommended for You</span>
+                        <p class="mb-0 fw-bold">Mega Drive - Apollo Hospital</p>
+                        <small class="text-muted">10 Oct | 5.2 km away | Whole Blood & Platelets</small>
+                    </div>
+                    <button class="btn btn-danger btn-sm rounded-pill px-4">Register Slot</button>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
+            <div class="camp-slider mb-4">
+                <div class="camp-card shadow-sm">
+                    <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=600');"></div>
+                    <div class="p-3">
+                        <span class="text-muted small fw-bold">RED CROSS SOCIETY</span>
+                        <h6 class="fw-bold mb-2">Corporate Drive, Sector 62</h6>
+                        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
+                    </div>
+                </div>
+                <div class="camp-card shadow-sm">
+                    <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1579152276502-545a248a6a61?auto=format&fit=crop&q=80&w=600');"></div>
+                    <div class="p-3">
+                        <span class="text-muted small fw-bold">GOVT HOSPITAL</span>
+                        <h6 class="fw-bold mb-2">Weekend Rural Outreach</h6>
+                        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="jd-card p-4">
+                <h5 class="fw-bold mb-3">Verified Partner Banks Nearby</h5>
+                <div class="d-flex gap-2 mb-3 overflow-auto pb-2">
+                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3 active">All Banks</button>
+                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Whole Blood</button>
+                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Platelets</button>
+                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Plasma</button>
+                </div>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
+                        <div>
+                            <p class="mb-0 fw-bold">Max Super Speciality</p>
+                            <small class="text-muted">Verified Partner • 2.1 km</small>
+                        </div>
+                        <span class="badge bg-success rounded-pill">Stock: High</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
+                        <div>
+                            <p class="mb-0 fw-bold">AIIMS Trauma Centre</p>
+                            <small class="text-muted">Govt Partner • 4.5 km</small>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill">Stock: Medium</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="jd-card p-4 border-start border-5 border-danger">
+                <div class="d-flex justify-content-between mb-3">
+                    <h5 class="fw-bold text-danger mb-0">Emergency Need</h5>
+                    <span class="spinner-grow spinner-grow-sm text-danger"></span>
+                </div>
+                <p class="small">O+ Blood Required urgently at <strong>City Hospital</strong>. 3 units needed by tonight.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger btn-sm flex-grow-1 rounded-pill">Accept</button>
+                    <button class="btn btn-light btn-sm flex-grow-1 rounded-pill">Decline</button>
+                </div>
+            </div>
+            <div class="jd-card p-4 text-center">
+                <h5 class="fw-bold mb-3">Eligibility Status</h5>
+                <div class="eligibility-check shadow-sm"><i class="fa-solid fa-check"></i></div>
+                <p class="fw-bold mb-1">Ready to Donate!</p>
+                <p class="small text-muted mb-3">You completed your cooldown of 90 days. Health markers (Hb/BP) look optimal.</p>
+                <button class="btn btn-danger w-100 rounded-pill py-2">Quick Health Pre-Check</button>
+            </div>
+
+            <div class="jd-card p-4">
+                <h5 class="fw-bold mb-3">Achievements</h5>
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
+                    <div class="text-center" style="width: 70px;">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-100 mb-1" alt="badge">
+                        <small class="d-block x-small fw-bold">Hero</small>
+                    </div>
+                    <div class="text-center" style="width: 70px;">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
+                        <small class="d-block x-small">Reliable</small>
+                    </div>
+                    <div class="text-center" style="width: 70px;">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
+                        <small class="d-block x-small">Fast Help</small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="emergency-banner mb-5 text-center shadow-lg">
+        <h3 class="fw-bold">In Need of Blood?</h3>
+        <p class="mb-4">Raise a verified emergency request to reach 25,000+ donors instantly.</p>
+        <button class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-danger">Start Emergency Request</button>
+    </div>
+
+    
+</div>
+
+
+</template>
