@@ -14,7 +14,7 @@ class Donor(models.Model):
     address = models.TextField(blank=True, null=True)
     username = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=128)
-    Blood_Group = models.CharField(max_length=3, choices=BLOOD_GROUPS)
+    blood_Group = models.CharField(max_length=3, choices=BLOOD_GROUPS)
 
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
