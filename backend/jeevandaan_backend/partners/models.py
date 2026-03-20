@@ -16,7 +16,7 @@ class Partners(models.Model):
     is_verified = models.BooleanField(default=False)
     is_live = models.BooleanField(default=False)
 
-    convenience_fees = models.FloatField(max_digits=10, decimal_places=2, default=0.0)  # fixed: was convenience_fees
+    convenience_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)  # fixed: was convenience_fees
     fees_description = models.TextField(blank=True, null=True) 
     
     
@@ -33,8 +33,8 @@ class Partners(models.Model):
 
     def __str__(self):
         return self.hospital_name
-
-
+"""
+ 
 class DonationHistory(models.Model):    # fixed: typo + PascalCase
     donor = models.ForeignKey(Donor, on_delete=models.CASCADE)      # fixed: was donor_id
     partner = models.ForeignKey(Partners, on_delete=models.CASCADE)
@@ -76,3 +76,4 @@ class Stock(models.Model):
     def __str__(self):
         return f"{self.partner.hospital_name} has {self.quantity} units of {self.blood_group} blood"
     
+"""
