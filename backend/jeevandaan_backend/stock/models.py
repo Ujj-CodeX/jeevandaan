@@ -10,14 +10,14 @@ class Stock(models.Model):
         ('AB+', 'AB+'), ('AB-', 'AB-'),
     ]
 
-    # Which bank owns this stock
+    
     partner = models.ForeignKey(
         'partners.Partners',
         on_delete=models.CASCADE,
         related_name='stock'
     )
 
-    # Blood group and quantity
+    
     blood_group = models.CharField(max_length=3, choices=BLOOD_GROUPS)
     quantity = models.PositiveIntegerField(default=0)
 
