@@ -33,7 +33,7 @@ class Donor(models.Model):
     is_locked=models.BooleanField(default=False)
     locked_until=models.DateTimeField(null=True, blank=True)
     
-
+    total_requests_raised = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
