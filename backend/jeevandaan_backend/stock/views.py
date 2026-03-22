@@ -1,3 +1,16 @@
+from flask.cli import load_dotenv
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from .models import Stock
+from .serializers import StockSerializer
+import jwt
+import os
+load_dotenv()
+
+# ── Partner updates their stock ───────────────────────
+from dotenv import load_dotenv
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,14 +20,26 @@ from .serializers import StockSerializer
 import jwt
 import os
 
+load_dotenv()
 
-# ── Partner updates their stock ───────────────────────
+
 class StockUpdateView(APIView):
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+
+        if not token:
+            return Response(
+                {'error': 'No token provided.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            secret = os.getenv('SECRET_KEY')
+            payload = jwt.decode(token, secret, algorithms=['HS256'])
+            print("PAYLOAD:", payload)
+
             if payload.get('type') != 'partner':
                 return Response(
                     {'error': 'Only partners can update stock.'},
@@ -31,7 +56,6 @@ class StockUpdateView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Update if exists, create if not
             stock, created = Stock.objects.update_or_create(
                 partner_id=partner_id,
                 blood_group=blood_group,
@@ -44,9 +68,22 @@ class StockUpdateView(APIView):
             })
 
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except jwt.InvalidTokenError as e:
+            print("JWT ERROR:", str(e))
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            print("ERROR:", str(e))
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # ── View stock of a specific partner ─────────────────

@@ -1,6 +1,7 @@
 
 import uuid
 from django.db import models
+from sqlalchemy import null
 from users.models import Donor
 
 class AttenderRequest(models.Model):
@@ -21,7 +22,9 @@ class AttenderRequest(models.Model):
     reference_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # fixed: was reference_idpatit
     patient_name = models.CharField(max_length=100)
     patient_age = models.PositiveIntegerField()
-    patient_photo = models.ImageField(upload_to='patient_photos/', null=True, blank=True)  # fixed: was patient_photo
+    patient_photo = models.URLField(max_length=500, blank=True, null=True)      # ← URLField
+    doctor_letterhead = models.URLField(max_length=500, blank=True, null=True)  # ← URLField
+    attender_id_proof = models.URLField(max_length=500, blank=True, null=True)
 
     quantity = models.PositiveIntegerField()
     blood_group = models.CharField(max_length=3, choices=Donor.BLOOD_GROUPS)
@@ -33,14 +36,13 @@ class AttenderRequest(models.Model):
     attender_phone = models.CharField(max_length=15)  # fixed: was attender_phone
     id_type = models.CharField(max_length=50)
     id_no = models.CharField(max_length=50)
+    city = models.CharField(max_length=100, blank=True, null=True)
 
-    doctor_letter_head = models.CharField(max_length=100)
-    attnder_id_proof = models.ImageField(upload_to='attender_id_proofs/', null=True, blank=True)  # fixed: was attnder_id_proof
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    expires_at = models.DateTimeField()  # fixed: was expires_at
+    expires_at = models.DateTimeField(null=True, blank=True)  # fixed: was expires_at
 
 
 def __str__(self):

@@ -22,7 +22,7 @@ class Donor(models.Model):
     auth_provider = models.CharField(max_length=50, choices=[('google', 'Google'), ('local', 'Local')], default='local') 
     
     aadhaar_number = models.CharField(max_length=12, unique=True, null=True, blank=True)  # fixed: was aadhar_number
-    is_verified = models.BooleanField(default=False) 
+    is_aadhaar_verified = models.BooleanField(default=False) 
     verification_tag = models.BooleanField(default=False) 
     
 

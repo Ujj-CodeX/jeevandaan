@@ -8,9 +8,10 @@ import jwt
 import os
 from datetime import datetime, timedelta
 from rest_framework.permissions import AllowAny
+from dotenv import load_dotenv
 
 #helper function to generate JWT token
-
+load_dotenv()  
 def generate_jwt_token(donor_id):
     access_payload = {
         'id': donor_id,

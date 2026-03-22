@@ -3,7 +3,9 @@ from .views import (
     PartnerRegisterView,
     PartnerLoginView,
     PartnerProfileView,
-    PartnerPublicListView
+    PartnerPublicListView,
+    NearbyPartnersView,      # ← add
+    NearbyDonorsView ,
 )
 
 urlpatterns = [
@@ -11,4 +13,6 @@ urlpatterns = [
     path('login/', PartnerLoginView.as_view()),
     path('profile/', PartnerProfileView.as_view()),
     path('list/', PartnerPublicListView.as_view()),
+    path('nearby/', NearbyPartnersView.as_view()),           # ← add
+    path('nearby-donors/', NearbyDonorsView.as_view()),
 ]

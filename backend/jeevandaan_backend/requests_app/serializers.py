@@ -40,7 +40,8 @@ class PartnerDonorRequestSerializer(serializers.ModelSerializer):
             'partner',
             'assigned_donor',
             'created_at',
-            'updated_at'
+            'updated_at',
+            'expires_at',
         ]
 
 
