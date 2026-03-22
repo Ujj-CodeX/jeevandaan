@@ -3,7 +3,7 @@ import uuid
 from django.db import models
 from users.models import Donor
 
-class Attender_request(models.Model):
+class AttenderRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('fulfilled', 'Fulfilled'),

@@ -108,7 +108,7 @@ class PartnerProfileView(APIView):
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
         
-class PartnerPublicView(APIView):
+class PartnerPublicListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):

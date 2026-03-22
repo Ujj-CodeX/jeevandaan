@@ -67,6 +67,7 @@ class DonorLoginView(APIView):
                 {'error': 'Account locked. Please try again later.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+            print("SIGN KEY:", os.getenv('SECRET_KEY'))
 
             tokens = generate_jwt_token(donor.id)
             return Response({
@@ -76,31 +77,31 @@ class DonorLoginView(APIView):
         })
 
 class DonorProfileView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        auth_header = request.headers.get('Authorization', '')
+        print("AUTH HEADER:", auth_header)
+
+        if not auth_header:
+            return Response(
+                {'error': 'No token provided.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        token = auth_header.replace('Bearer ', '').strip()  # ← defined before try block
+        print("TOKEN:", token)
+        print("VERIFY KEY:", os.getenv('SECRET_KEY'))
+
         try:
             payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            print("PAYLOAD:", payload)
             donor = Donor.objects.get(id=payload['id'])
             return Response(DonorProfileSerializer(donor).data)
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
+            print("JWT ERROR:", str(e))
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Donor.DoesNotExist:
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    def put(self, request):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            donor = Donor.objects.get(id=payload['id'])
-            serializer = DonorProfileSerializer(donor, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
