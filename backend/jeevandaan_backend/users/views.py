@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timedelta
 from rest_framework.permissions import AllowAny
 from dotenv import load_dotenv
+from .google_auth import verify_google_token
 
 #helper function to generate JWT token
 load_dotenv()  
@@ -106,3 +107,77 @@ class DonorProfileView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Donor.DoesNotExist:
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+
+
+class GoogleAuthView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token')
+
+        if not token:
+            return Response(
+                {'error': 'Google token is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify token with Google
+        user_info = verify_google_token(token)
+
+        if not user_info:
+            return Response(
+                {'error': 'Invalid Google token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        email = user_info['email']
+        google_id = user_info['google_id']
+        name = user_info['name']
+
+        # Check if donor already exists
+        donor = Donor.objects.filter(email=email).first()
+
+        if donor:
+            # Existing donor — just login
+            # Update google_id if not set
+            if not donor.google_id:
+                donor.google_id = google_id
+                donor.auth_provider = 'google'
+                donor.save()
+
+            tokens = generate_jwt_token(donor.id)
+            return Response({
+                'message': 'Login successful.',
+                'tokens': tokens,
+                'donor': DonorProfileSerializer(donor).data,
+                'is_new_user': False
+            })
+
+        else:
+            # New donor — create account
+            # Auto generate username from email
+            username = email.split('@')[0]
+
+            # Make username unique if taken
+            if Donor.objects.filter(username=username).exists():
+                username = f"{username}_{google_id[:6]}"
+
+            donor = Donor.objects.create(
+                name=name,
+                email=email,
+                username=username,
+                google_id=google_id,
+                auth_provider='google',
+                password=None,          # no password for Google users
+                blood_group=None,       # will be filled in profile completion
+            )
+
+            tokens = generate_jwt_token(donor.id)
+            return Response({
+                'message': 'Account created successfully.',
+                'tokens': tokens,
+                'donor': DonorProfileSerializer(donor).data,
+                'is_new_user': True,    # ← Vue.js redirects to complete profile
+            }, status=status.HTTP_201_CREATED)

@@ -68,7 +68,7 @@ class PartnerDonorRequest(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
     expires_at = models.DateTimeField()  # fixed: was expires_at
 
-    cancellation_reason = models.TextField()  # fixed: was cancellation_reason
+    cancellation_reason = models.TextField(null=True, blank=True)  # fixed: was cancellation_reason
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

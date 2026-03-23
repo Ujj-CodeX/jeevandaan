@@ -15,6 +15,7 @@ from users.models import Donor
 from partners.models import Partners
 import jwt
 import os
+from notifications.helpers import notify_nearby_donors
 
 
 # ── helper — decode token ────────────────────────────
@@ -135,12 +136,19 @@ class PartnerDonorRequestCreateView(APIView):
             serializer = PartnerDonorRequestSerializer(data=request.data)
 
             if serializer.is_valid():
-                # Auto set expiry — 12 hours from now
                 expires_at = timezone.now() + timedelta(hours=12)
                 req = serializer.save(
                     partner=partner,
                     expires_at=expires_at
                 )
+
+                # Auto notify nearby donors! ✅
+                notify_nearby_donors(
+                    blood_group=req.blood_group,
+                    city=partner.city,
+                    message=f'Urgent! {req.blood_group} blood needed at {partner.hospital_name}. Please donate!'
+                )
+
                 return Response({
                     'message': 'Donor request raised successfully.',
                     'request': PartnerDonorRequestSerializer(req).data
