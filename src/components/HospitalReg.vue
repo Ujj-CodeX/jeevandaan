@@ -1,223 +1,436 @@
 <template>
+  <div>
     <div class="card main-card">
-    <div class="row g-0">
+      <div class="row g-0">
         <div class="col-md-5 illustration-side d-none d-md-flex text-center">
-            <img src="https://img.freepik.com/free-vector/hospital-building-concept-illustration_114360-8440.jpg" alt="Hospital Care" style="width: 90%;">
-            <h5 class="mt-4 fw-bold text-primary">Healthcare Partnership</h5>
-            <p class="text-muted small px-4">Register your medical facility to streamline blood and organ donation workflows.</p>
+          <img src="https://img.freepik.com/free-vector/hospital-building-concept-illustration_114360-8440.jpg" alt="Hospital Care" style="width: 90%;">
+          <h5 class="mt-4 fw-bold text-primary">Healthcare Partnership</h5>
+          <p class="text-muted small px-4">Register your medical facility to streamline blood and organ donation workflows.</p>
         </div>
 
         <div class="col-md-7 login-side">
-            <div class="brand-logo">
-                <i class="fa-solid fa-hospital-user"></i> JeevanDaan+ <span class="badge bg-primary fs-6">PARTNERS</span>
-            </div>
-            <h2 class="fw-bold">Facility Registration</h2>
-            <p class="text-muted small mb-4">Join the network to manage donor requests and emergency supplies.</p>
+          <div class="brand-logo">
+            <i class="fa-solid fa-hospital-user"></i> JeevanDaan+ <span class="badge bg-primary fs-6">PARTNERS</span>
+          </div>
+          <h2 class="fw-bold">Facility Registration</h2>
+          <p class="text-muted small mb-4">Join the network to manage donor requests and emergency supplies.</p>
 
-            <form>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="input-group-custom">
-                            <i class="fa-solid fa-hospital text-muted"></i>
-                            <input type="text" placeholder="Hospital Name" required>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="input-group-custom">
-                            <i class="fa-solid fa-id-card text-muted"></i>
-                            <input type="text" placeholder="Reg/License ID" required>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="input-group-custom">
-                            <i class="fa-solid fa-phone-volume text-muted"></i>
-                            <input type="tel" placeholder="Emergency Contact" required>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="input-group-custom">
-                            <i class="fa-solid fa-layer-group text-muted"></i>
-                            <select required>
-                                <option selected disabled>Facility Type</option>
-                                <option>Government</option>
-                                <option>Private Multi-specialty</option>
-                                <option>Blood Bank</option>
-                                
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
+          <form @submit.prevent="handleRegister">
+            <div class="row">
+              <div class="col-md-6">
                 <div class="input-group-custom">
-                    <i class="fa-solid fa-envelope text-muted"></i>
-                    <input type="email" placeholder="Official Email Address" required>
+                  <i class="fa-solid fa-hospital text-muted"></i>
+                  <input type="text" v-model="form.hospital_name" placeholder="Hospital Name" required>
                 </div>
-
-                <div class="input-group-custom mb-2">
-                    <i class="fa-solid fa-lock text-muted"></i>
-                    <input type="password" id="hosp-pw" placeholder="Create Admin Password" required>
+              </div>
+              <div class="col-md-6">
+                <div class="input-group-custom">
+                  <i class="fa-solid fa-id-card text-muted"></i>
+                  <input type="text" v-model="form.license_id" placeholder="Reg/License ID" required>
                 </div>
+              </div>
+            </div>
 
-                <div class="restriction-text">
-                    <span id="hChar" class="req"><i class="fa-solid fa-circle-check"></i> 8+ Characters</span>
-                    <span id="hAlpha" class="req"><i class="fa-solid fa-circle-check"></i> Alpha-numeric</span>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="input-group-custom">
+                  <i class="fa-solid fa-phone-volume text-muted"></i>
+                  <input type="tel" v-model="form.contact" placeholder="Emergency Contact" required>
                 </div>
-
-                <div class="form-check mb-4">
-                    <input class="form-check-input" type="checkbox" id="hTerms" required>
-                    <label class="form-check-label text-muted small" for="hTerms">
-                        We agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#hospModal" class="text-primary fw-bold text-decoration-none">Partner Terms</a>
-                    </label>
+              </div>
+              <div class="col-md-6">
+                <div class="input-group-custom">
+                  <i class="fa-solid fa-layer-group text-muted"></i>
+                  <select v-model="form.partner_type">
+                    <option selected disabled>Facility Type</option>
+                    <option value="government">Government</option>
+                    <option value="private_multi_specialty">Private Multi-specialty</option>
+                    <option value="blood_bank">Blood Bank</option>
+                  </select>
                 </div>
+              </div>
+            </div>
 
-                <button type="submit" class="btn-hospital">Register Facility</button>
-                <p class="text-center mt-3 text-muted small">Already registered? <a href="#" class="text-primary fw-bold text-decoration-none">Partner Login</a></p>
-            </form>
+            <div class="input-group-custom">
+              <i class="fa-solid fa-envelope text-muted"></i>
+              <input type="email" v-model="form.email" placeholder="Official Email Address" required>
+            </div>
+            <div class="input-group-custom">
+    <i class="fa-solid fa-map-marker-alt text-muted"></i>
+    <input type="text" v-model="form.address" placeholder="Full Address" required>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="input-group-custom">
+            <i class="fa-solid fa-city text-muted"></i>
+            <input type="text" v-model="form.city" placeholder="City" required>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="input-group-custom">
+            <i class="fa-solid fa-map text-muted"></i>
+            <input type="text" v-model="form.state" placeholder="State" required>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="hospModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Partners Terms of Use</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-muted small">
-                <p>1. Facilities must maintain real-time inventory updates for blood stocks.</p>
-                <p>2. Emergency organ requests must follow national clinical protocols.</p>
-                <p>3. Patient data shared via JeevanDaan+ must be handled under HIPAA/Digital Health standards.</p>
-            </div>
-        </div>
-    </div>
+<div class="input-group-custom">
+    <i class="fa-solid fa-notes-medical text-muted"></i>
+    <input type="text" v-model="form.facility" placeholder="Facility Description (e.g. 24/7 Blood Bank)" required>
 </div>
 
+<div class="input-group-custom">
+    <i class="fa-solid fa-indian-rupee-sign text-muted"></i>
+    <input type="number" v-model="form.convenience_fee" placeholder="Convenience Fee (₹)" min="0" required>
+</div>
+
+            <div class="input-group-custom mb-2" style="position: relative;">
+              <i class="fa-solid fa-lock text-muted"></i>
+              <input type="password" id="hosp-pw" v-model="form.password" placeholder="Create Admin Password" required>
+              <i class="fa-solid fa-eye toggle-eye" @click="togglePassword('hosp-pw', $event.target)"></i>
+            </div>
+
+            <div class="restriction-text">
+              <span id="hChar" class="req"><i class="fa-solid fa-circle-check"></i> 8+ Characters</span>
+              <span id="hAlpha" class="req"><i class="fa-solid fa-circle-check"></i> Alpha-numeric</span>
+            </div>
+
+            <div class="form-check mb-4">
+              <input class="form-check-input" type="checkbox" id="hTerms"
+                :disabled="!termsRead"
+                v-model="termsAccepted">
+              <label class="form-check-label text-muted small" for="hTerms">
+                We agree to the
+                <a href="#" @click.prevent="openTermsModal" class="text-primary fw-bold text-decoration-none">
+                  Partner Terms
+                </a>
+              </label>
+            </div>
+
+            
+<div v-if="error" class="alert-custom error mb-3">
+    <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+</div>
+
+
+<div v-if="success" class="alert-custom success mb-3">
+    <i class="fa-solid fa-circle-check"></i> {{ success }}
+</div>
+
+<button type="submit" class="btn-hospital" :disabled="!termsAccepted || loading">
+    <span v-if="loading">Registering...</span>
+    <span v-else>Register Facility</span>
+</button>
+            <p class="text-center mt-3 text-muted small">Already registered?
+              <a href="#" class="text-primary fw-bold text-decoration-none">Partner Login</a>
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ Vue Modal -->
+    <div v-if="showTermsModal" class="modal-overlay" @click.self="closeTermsModal">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h5 class="fw-bold mb-0">Partners Terms of Use</h5>
+          <button class="btn-close" @click="closeTermsModal"></button>
+        </div>
+        <div class="modal-box-body text-muted small">
+          <p>1. Facilities must maintain real-time inventory updates for blood stocks.</p>
+          <p>2. Emergency organ requests must follow national clinical protocols.</p>
+          <p>3. Patient data shared via JeevanDaan+ must be handled under HIPAA/Digital Health standards.</p>
+        </div>
+        <div class="modal-box-footer">
+          <button class="btn btn-primary w-100 rounded-pill" @click="acceptTerms">
+            I Understand
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </template>
-<style>
-    body.Hospital-reg {
-            /* Blue Gradient with White mix as requested */
-            background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 50%, #d1e7ff 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 0;
-            font-family: 'Segoe UI', sans-serif;
+
+<script>
+import api from '@/api/index.js'
+
+export default {
+    name: 'hospitalreg',
+
+    data() {
+        return {
+            termsRead: false,
+            termsAccepted: false,
+            showTermsModal: false,
+            loading: false,
+            error: null,
+            success: null,
+
+            form: {
+                hospital_name: '',
+                license_id: '',
+                contact: '',
+                partner_type: '',
+                email: '',
+                address: '',
+                city: '',
+                state: '',
+                facility: '',
+                convenience_fee: 0,
+                fee_description: '',
+                password: ''
+            }
         }
+    },
+
+    methods: {
+        async handleRegister() {
+            if (!this.termsAccepted) {
+                this.error = 'Please accept Partner Terms first.'
+                return
+            }
+
+            const pw = this.form.password
+            if (pw.length < 8) {
+                this.error = 'Password must be at least 8 characters.'
+                return
+            }
+            if (!/[a-zA-Z]/.test(pw) || !/[0-9]/.test(pw)) {
+                this.error = 'Password must be alpha-numeric.'
+                return
+            }
+
+            this.loading = true
+            this.error = null
+
+            try {
+                const response = await api.post('/api/partners/register/', this.form)
+
+                // Store tokens
+                localStorage.setItem('access_token', response.data.tokens.access)
+                localStorage.setItem('refresh_token', response.data.tokens.refresh)
+                localStorage.setItem('user_type', 'partner')
+
+                // Store partner info
+                localStorage.setItem('partner', JSON.stringify(response.data.partner))
+
+                this.success = 'Facility registered! Waiting for admin verification...'
+
+                // Redirect after 2 seconds
+                setTimeout(() => {
+                    this.$router.push('/partnersdash')
+                }, 2000)
+
+            } catch (error) {
+                if (error.response && error.response.data) {
+                    const errors = error.response.data
+                    const firstError = Object.values(errors)[0]
+                    this.error = Array.isArray(firstError) ? firstError[0] : firstError
+                } else {
+                    this.error = 'Something went wrong. Please try again.'
+                }
+            } finally {
+                this.loading = false
+            }
+        },
+
+        openTermsModal() {
+            this.showTermsModal = true
+        },
+
+        closeTermsModal() {
+            this.showTermsModal = false
+        },
+
+        acceptTerms() {
+            this.termsRead = true
+            this.termsAccepted = true
+            this.showTermsModal = false
+        },
+
+        togglePassword(inputId, iconEl) {
+            const input = document.getElementById(inputId)
+            if (input.type === 'password') {
+                input.type = 'text'
+                iconEl.classList.replace('fa-eye', 'fa-eye-slash')
+            } else {
+                input.type = 'password'
+                iconEl.classList.replace('fa-eye-slash', 'fa-eye')
+            }
+        }
+    },
+
+    mounted() {
+        document.body.classList.add('Hospital-reg')
+
+        const hPw = document.getElementById('hosp-pw')
+        const hChar = document.getElementById('hChar')
+        const hAlpha = document.getElementById('hAlpha')
+
+        hPw.addEventListener('input', () => {
+            const v = hPw.value
+            v.length >= 8 ? hChar.classList.add('active') : hChar.classList.remove('active')
+            ;(/[a-zA-Z]/.test(v) && /[0-9]/.test(v)) ? hAlpha.classList.add('active') : hAlpha.classList.remove('active')
+        })
+    },
+
+    unmounted() {
+        document.body.classList.remove('Hospital-reg')
+    }
+}
+</script>
+
+<style>
+  body.Hospital-reg {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 50%, #d1e7ff 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 0;
+    font-family: 'Segoe UI', sans-serif;
+  }
 </style>
 
 <style scoped>
-        :root {
-            --hosp-blue: #0d6efd;
-            --light-blue: #e7f1ff;
-            --success-green: #198754;
-        }
+  :root {
+    --hosp-blue: #0d6efd;
+    --light-blue: #e7f1ff;
+    --success-green: #198754;
+  }
 
-        
+  .main-card {
+    background: white;
+    border-radius: 30px;
+    box-shadow: 0 20px 60px rgba(13, 110, 253, 0.15);
+    overflow: hidden;
+    max-width: 1150px;
+    width: 95%;
+    border: none;
+  }
 
-        .main-card {
-            background: white;
-            border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(13, 110, 253, 0.15);
-            overflow: hidden;
-            max-width: 1150px;
-            width: 95%;
-            border: none;
-        }
+  .illustration-side {
+    background-color: #f8fbff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
 
-        .illustration-side {
-            background-color: #f8fbff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-        }
+  .login-side { padding: 40px 60px; }
 
-        .login-side { padding: 40px 60px; }
+  .brand-logo {
+    color: var(--hosp-blue);
+    font-weight: 800;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-        .brand-logo {
-            color: var(--hosp-blue);
-            font-weight: 800;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+  .input-group-custom {
+    background: #f1f3f5;
+    border-radius: 12px;
+    padding: 10px 18px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    border: 1px solid transparent;
+    position: relative;
+  }
 
-        .input-group-custom {
-            background: #f1f3f5;
-            border-radius: 12px;
-            padding: 10px 18px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            border: 1px solid transparent;
-        }
+  .input-group-custom:focus-within {
+    background: #fff;
+    border-color: #b6d4fe;
+  }
 
-        .input-group-custom:focus-within {
-            background: #fff;
-            border-color: #b6d4fe;
-        }
+  .input-group-custom input,
+  .input-group-custom select {
+    border: none;
+    background: transparent;
+    width: 100%;
+    margin-left: 12px;
+    outline: none;
+    color: #495057;
+  }
 
-        .input-group-custom input, .input-group-custom select {
-            border: none;
-            background: transparent;
-            width: 100%;
-            margin-left: 12px;
-            outline: none;
-            color: #495057;
-        }
+  .toggle-eye {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.2s;
+  }
 
-        .restriction-text {
-            font-size: 0.75rem;
-            margin-top: -10px;
-            margin-bottom: 15px;
-            display: flex;
-            gap: 15px;
-        }
-        
-        .req { color: #999; }
-        .req.active { color: var(--success-green); font-weight: bold; }
+  .toggle-eye:hover { color: #333; }
 
-        .btn-hospital {
-            background-color: var(--hosp-blue);
-            border: none;
-            border-radius: 50px;
-            padding: 12px;
-            font-weight: 600;
-            color: white;
-            width: 100%;
-        }
+  .restriction-text {
+    font-size: 0.75rem;
+    margin-top: -10px;
+    margin-bottom: 15px;
+    display: flex;
+    gap: 15px;
+  }
 
-        @media (max-width: 768px) {
-            .illustration-side { display: none; }
-            .login-side { padding: 30px 20px; }
-        }
-    </style>
-<script>
-    export default {
-        name : 'hospitalreg',
-    mounted(){
-        document.body.classList.add('Hospital-reg');
-    const hPw = document.getElementById('hosp-pw');
-    const hChar = document.getElementById('hChar');
-    const hAlpha = document.getElementById('hAlpha');
+  .req { color: #999; }
+  .req.active { color: #198754; font-weight: bold; }
 
-    hPw.addEventListener('input', () => {
-        const v = hPw.value;
-        v.length >= 8 ? hChar.classList.add('active') : hChar.classList.remove('active');
-        (/[a-zA-Z]/.test(v) && /[0-9]/.test(v)) ? hAlpha.classList.add('active') : hAlpha.classList.remove('active');
-    })},
-     unmounted() {
-    document.body.classList.remove('Hospital-reg');
-    }
+  .btn-hospital {
+    background-color: #0d6efd;
+    border: none;
+    border-radius: 50px;
+    padding: 12px;
+    font-weight: 600;
+    color: white;
+    width: 100%;
+    transition: 0.3s;
+  }
 
+  .btn-hospital:hover { opacity: 0.9; transform: translateY(-2px); }
 
-    }
-</script>
+  .btn-hospital:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Vue Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .modal-box {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 10px;
+  }
+
+  .modal-box-body { padding: 10px 24px; }
+  .modal-box-footer { padding: 10px 24px 20px; }
+
+  @media (max-width: 768px) {
+    .illustration-side { display: none; }
+    .login-side { padding: 30px 20px; }
+  }
+</style>

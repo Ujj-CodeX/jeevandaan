@@ -47,12 +47,10 @@ class PartnerDonorRequestSerializer(serializers.ModelSerializer):
 
 class PartnerDonorRequestPublicSerializer(serializers.ModelSerializer):
     hospital_name = serializers.CharField(
-        source='partner.hospital_name',
-        read_only=True
+        source='partner.hospital_name', read_only=True
     )
     city = serializers.CharField(
-        source='partner.city',
-        read_only=True
+        source='partner.city', read_only=True
     )
 
     class Meta:
@@ -65,5 +63,5 @@ class PartnerDonorRequestPublicSerializer(serializers.ModelSerializer):
             'hospital_name',
             'city',
             'expires_at',
-            'created_at'
+            'created_at',
         ]

@@ -136,340 +136,468 @@
 
 
 <template>
-
-<nav class="navbar navbar-expand-lg sticky-top">
-    <div class="container">
+  <div>
+    <nav class="navbar navbar-expand-lg sticky-top">
+      <div class="container">
         <a class="navbar-brand fw-bold text-danger" href="#">JeevanDaan<span class="text-dark">+</span></a>
         <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav">
-            <span class="navbar-toggler-icon"></span>
+          <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="dashboardNav">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item">
-                    <RouterLink class="nav-link active" to="/">Home</RouterLink>
-                </li>
-                <li class="nav-item">
-                    <RouterLink class="nav-link" to="/user_request">Raise a Request</RouterLink></li>
-                <li class="nav-item"><a class="nav-link" href="#">Learn More</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Logout</a></li>
-            </ul>
-            <div class="d-flex align-items-center gap-4">
-                <a href="#" class="nav-icon"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></a>
-                <a href="#" class="nav-icon"><i class="fa-regular fa-circle-user"></i></a>
-            </div>
+          <ul class="navbar-nav mx-auto">
+            <li class="nav-item"><RouterLink class="nav-link active" to="/">Home</RouterLink></li>
+            <li class="nav-item"><RouterLink class="nav-link" to="/user_request">Raise a Request</RouterLink></li>
+            <li class="nav-item"><a class="nav-link" href="#">Learn More</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" @click.prevent="logout">Logout</a></li>
+          </ul>
+          <div class="d-flex align-items-center gap-4">
+            <a href="#" class="nav-icon"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></a>
+            <a href="#" class="nav-icon"><i class="fa-regular fa-circle-user"></i></a>
+          </div>
         </div>
-    </div>
-</nav>
+      </div>
+    </nav>
 
-<div class="container py-4">
-    <header class="row align-items-center mb-5">
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-danger" role="status"></div>
+      <p class="mt-3 text-muted">Loading your dashboard...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="container py-5 text-center">
+      <i class="fa-solid fa-triangle-exclamation text-danger fs-1 mb-3"></i>
+      <p class="text-danger">{{ error }}</p>
+      <button class="btn btn-danger rounded-pill px-4" @click="fetchProfile">Retry</button>
+    </div>
+
+    <div v-else class="container py-4">
+
+      <!-- Header — FROM API -->
+      <header class="row align-items-center mb-5">
         <div class="col-md-8">
-            <h2 class="fw-bold mb-1">Hi, Rahul Sharma 👋</h2>
-            <p class="text-muted">Your Lifesaver Dashboard | <span class="text-danger fw-medium">Every donation saves a life.</span></p>
+          <h2 class="fw-bold mb-1">Hi, {{ donor.name }} 👋</h2>
+          <p class="text-muted">
+            Your Lifesaver Dashboard |
+            <span class="text-danger fw-medium">Every donation saves a life.</span>
+          </p>
         </div>
         <div class="col-md-4 text-md-end">
-            <span class="donor-badge shadow-sm"><i class="fa-solid fa-crown me-2"></i>Gold Member</span>
+          <!-- member_tag FROM API -->
+          <span class="donor-badge shadow-sm">
+            <i class="fa-solid fa-crown me-2"></i>{{ donor.member_tag }}
+          </span>
         </div>
-    </header>
+      </header>
 
-    <div class="row g-4 mb-2">
+      <!-- Stat Cards — FROM API -->
+      <div class="row g-4 mb-2">
         <div class="col-6 col-lg-3">
-            <div class="jd-card stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
-                <h6 class="text-muted small mb-1">Next Eligible</h6>
-                <p class="fw-bold mb-0">12 Oct 2024</p>
-            </div>
+          <div class="jd-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
+            <h6 class="text-muted small mb-1">Blood Group</h6>
+            <p class="fw-bold mb-0">{{ donor.blood_group }}</p>
+          </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="jd-card stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
-                <h6 class="text-muted small mb-1">Total Donations</h6>
-                <p class="fw-bold mb-0">12 Units</p>
-            </div>
+          <div class="jd-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-droplet"></i></div>
+            <h6 class="text-muted small mb-1">Total Donations</h6>
+            <p class="fw-bold mb-0">{{ donor.total_donations }} Units</p>
+          </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="jd-card stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
-                <h6 class="text-muted small mb-1">Lives Impacted</h6>
-                <p class="fw-bold mb-0">36 People</p>
-            </div>
+          <div class="jd-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+            <h6 class="text-muted small mb-1">Lives Impacted</h6>
+            <!-- Each donation saves ~3 lives -->
+            <p class="fw-bold mb-0">{{ donor.total_donations * 3 }} People</p>
+          </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="jd-card stat-card">
-                <div class="stat-icon"><i class="fa-solid fa-shield-check"></i></div>
-                <h6 class="text-muted small mb-1">Reliability</h6>
-                <p class="fw-bold mb-0 text-success">98 Score</p>
-            </div>
+          <div class="jd-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-shield-check"></i></div>
+            <h6 class="text-muted small mb-1">Reliability</h6>
+            <p class="fw-bold mb-0 text-success">{{ donor.reliability_score }} Score</p>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div class="row">
+      <div class="row">
         <div class="col-lg-8">
 
-            <div class="mt-5 mb-4">
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <div>
-            <h5 class="fw-bold mb-0">Pending Partner Requests <span class="request-count-badge ms-2">3 Pending</span></h5>
-            <p class="text-muted small mb-0">Requests raised by hospitals & partner organizations</p>
-        </div>
-        <div class="pill-toggle d-none d-md-flex">
-            <button class="pill-btn active">All</button>
-            <button class="pill-btn">Emergency</button>
-            <button class="pill-btn">Normal</button>
-        </div>
+          <div class="mt-5 mb-4">
+  <div class="d-flex justify-content-between align-items-end mb-3">
+    <div>
+      <h5 class="fw-bold mb-0">
+        Pending Partner Requests
+        <span class="request-count-badge ms-2">{{ partnerRequests?.length || 0 }} Pending</span>
+      </h5>
+      <p class="text-muted small mb-0">Requests raised by hospitals & partner organizations</p>
     </div>
-
-    <div class="row g-3">
-        <div class="col-md-6 col-lg-4">
-            <div class="jd-card p-3 h-100">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <img src="https://ui-avatars.com/api/?name=City+General&background=E63946&color=fff" 
-                             class="partner-avatar" 
-                             data-bs-toggle="offcanvas" 
-                             data-bs-target="#partnerDetailModal" 
-                             alt="Partner">
-                        <div>
-                            <h6 class="fw-bold mb-0">City General Hospital</h6>
-                            <span class="text-muted" style="font-size: 0.7rem;">Requested 2 hrs ago</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <p class="small text-muted mb-2">
-                        <i class="fa-solid fa-location-dot me-2 text-danger"></i>Green Park, Delhi • 1.2 km away
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <span class="badge rounded-pill priority-emergency">Emergency</span>
-                        <span class="badge rounded-pill bg-light text-dark border">3 Units • O+</span>
-                        <span class="badge rounded-pill bg-light text-dark border">Platelets</span>
-                    </div>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
-                    <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="jd-card p-3 h-100">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <img src="https://ui-avatars.com/api/?name=St+Jude&background=f8f9fa&color=2d3436" 
-                             class="partner-avatar" 
-                             data-bs-toggle="offcanvas" 
-                             data-bs-target="#partnerDetailModal" 
-                             alt="Partner">
-                        <div>
-                            <h6 class="fw-bold mb-0">St. Jude Medical Center</h6>
-                            <span class="text-muted" style="font-size: 0.7rem;">Requested 5 hrs ago</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <p class="small text-muted mb-2">
-                        <i class="fa-solid fa-location-dot me-2 text-danger"></i>Okhla Phase III • 4.5 km away
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <span class="badge rounded-pill priority-high">High Priority</span>
-                        <span class="badge rounded-pill bg-light text-dark border">1 Unit • B-</span>
-                        <span class="badge rounded-pill bg-light text-dark border">Whole Blood</span>
-                    </div>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
-                    <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
-                </div>
-            </div>
-        </div>
+    <div class="pill-toggle d-none d-md-flex">
+      <button class="pill-btn active">All</button>
+      <button class="pill-btn">Emergency</button>
+      <button class="pill-btn">Normal</button>
     </div>
+  </div>
+
+  <!-- LOADING -->
+  <div v-if="requestsLoading" class="text-center py-4">
+    <div class="spinner-border spinner-border-sm text-danger"></div>
+    <span class="ms-2 text-muted small">Loading requests...</span>
+  </div>
+
+  <!-- ✅ EMPTY STATE -->
+  <div v-else-if="partnerRequests.length === 0" class="jd-card p-5 text-center">
+    <i class="fa-solid fa-heart-crack text-danger mb-3" style="font-size: 2.5rem;"></i>
+    <h6 class="fw-bold mb-1">No Pending Requests Right Now</h6>
+    <p class="text-muted small mb-0">
+      There are currently no open blood requests matching your profile.<br>
+      Check back soon — every minute counts! 🩸
+    </p>
+  </div>
+
+  <!-- REQUEST CARDS -->
+  <div v-else class="row g-3">
+    <div
+      class="col-md-6 col-lg-4"
+      v-for="req in partnerRequests"
+      :key="req.id"
+    >
+      <div class="jd-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <img
+            :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(req.hospital_name)}&background=E63946&color=fff`"
+            class="partner-avatar"
+            :alt="req.hospital_name"
+          >
+          <div>
+            <h6 class="fw-bold mb-0">{{ req.hospital_name }}</h6>
+            <span class="text-muted" style="font-size: 0.7rem;">
+              {{ timeAgo(req.created_at) }}
+            </span>
+          </div>
+        </div>
+        <div class="mb-3">
+          <p class="small text-muted mb-2">
+            <i class="fa-solid fa-location-dot me-2 text-danger"></i>
+            {{ req.city }}
+          </p>
+          <div class="d-flex flex-wrap gap-2">
+            <span
+              class="badge rounded-pill"
+              :class="isExpiringSoon(req.expires_at) ? 'priority-emergency' : 'priority-high'"
+            >
+              {{ isExpiringSoon(req.expires_at) ? 'Urgent' : 'Normal' }}
+            </span>
+            <span class="badge rounded-pill bg-light text-dark border">
+              {{ req.quantity }} Units • {{ req.blood_group }}
+            </span>
+            <span class="badge rounded-pill bg-light text-dark border">
+              Expires: {{ formatDate(req.expires_at) }}
+            </span>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
+          <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="offcanvas offcanvas-end" tabindex="-1" id="partnerDetailModal" aria-labelledby="partnerDetailModalLabel">
-    <div class="offcanvas-header p-4 pb-0">
-        <h5 class="offcanvas-title fw-bold" id="partnerDetailModalLabel">Partner Profile</h5>
-        <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body p-4">
-        <div class="text-center mb-4">
-            <img src="https://ui-avatars.com/api/?name=City+General&background=E63946&color=fff" class="rounded-circle mb-3" width="80" alt="Partner">
-            <h4 class="fw-bold mb-1">City General Hospital <i class="fa-solid fa-circle-check text-primary ms-1" style="font-size: 1rem;"></i></h4>
-            <div class="text-warning mb-2">
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star-half-stroke"></i>
-                <span class="text-muted ms-1">(4.8)</span>
-            </div>
-            <p class="text-muted small">Licensed Blood Bank • Est. 1995</p>
-        </div>
 
-        <div class="mb-4">
-            <h6 class="fw-bold small text-uppercase text-muted mb-3">Location</h6>
-            <div class="map-placeholder mb-2">
-                <i class="fa-solid fa-map-location-dot fs-2"></i>
+          <!-- Calendar — HARDCODED (kept as is) -->
+          <div class="jd-card p-4">
+            <div class="calendar-header">
+              <h5 class="fw-bold mb-0">Donation Camp Calendar</h5>
+              <div class="pill-toggle">
+                <button class="pill-btn active">Month</button>
+                <button class="pill-btn">Week</button>
+                <button class="pill-btn">List</button>
+              </div>
             </div>
-            <p class="small mb-0">122, Main Ring Road, Green Park, New Delhi, 110016</p>
-        </div>
+            <div class="calendar-grid text-center mb-3">
+              <div class="text-muted small fw-bold">Mon</div><div class="text-muted small fw-bold">Tue</div><div class="text-muted small fw-bold">Wed</div><div class="text-muted small fw-bold">Thu</div><div class="text-muted small fw-bold">Fri</div><div class="text-muted small fw-bold">Sat</div><div class="text-muted small fw-bold">Sun</div>
+              <div class="day-cell text-muted">28</div><div class="day-cell text-muted">29</div><div class="day-cell text-muted">30</div><div class="day-cell">1</div><div class="day-cell active-camp">2</div><div class="day-cell">3</div><div class="day-cell">4</div>
+              <div class="day-cell">5</div><div class="day-cell active-camp">6</div><div class="day-cell">7</div><div class="day-cell">8</div><div class="day-cell">9</div><div class="day-cell active-camp">10</div><div class="day-cell">11</div>
+            </div>
+            <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center">
+              <div>
+                <span class="badge bg-danger rounded-pill mb-1">Recommended for You</span>
+                <p class="mb-0 fw-bold">Mega Drive - Apollo Hospital</p>
+                <small class="text-muted">10 Oct | 5.2 km away | Whole Blood & Platelets</small>
+              </div>
+              <button class="btn btn-danger btn-sm rounded-pill px-4">Register Slot</button>
+            </div>
+          </div>
 
-        <div class="mb-4">
-            <h6 class="fw-bold small text-uppercase text-muted mb-3">Contact Details</h6>
-            <div class="p-3 bg-light rounded-4">
-                <div class="d-flex align-items-center mb-2">
-                    <i class="fa-solid fa-phone me-3 text-danger"></i>
-                    <span class="small">+91 11 2345 6789</span>
-                </div>
-                <div class="d-flex align-items-center">
-                    <i class="fa-solid fa-envelope me-3 text-danger"></i>
-                    <span class="small">emergency@cityhospital.com</span>
-                </div>
+          <!-- Nearby Camps — HARDCODED (kept as is) -->
+          <h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
+          <div class="camp-slider mb-4">
+            <div class="camp-card shadow-sm">
+              <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=600');"></div>
+              <div class="p-3">
+                <span class="text-muted small fw-bold">RED CROSS SOCIETY</span>
+                <h6 class="fw-bold mb-2">Corporate Drive, Sector 62</h6>
+                <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
+              </div>
             </div>
-        </div>
+            <div class="camp-card shadow-sm">
+              <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1579152276502-545a248a6a61?auto=format&fit=crop&q=80&w=600');"></div>
+              <div class="p-3">
+                <span class="text-muted small fw-bold">GOVT HOSPITAL</span>
+                <h6 class="fw-bold mb-2">Weekend Rural Outreach</h6>
+                <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
+              </div>
+            </div>
+          </div>
 
-        <div class="mb-4">
-            <h6 class="fw-bold small text-uppercase text-muted mb-3">Request History</h6>
-            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-                <span class="small">Units Requested (30 Days)</span>
-                <span class="fw-bold">142</span>
+          <!-- Partner Banks — HARDCODED (kept as is) -->
+          <div class="jd-card p-4">
+            <h5 class="fw-bold mb-3">Verified Partner Banks Nearby</h5>
+            <div class="d-flex gap-2 mb-3 overflow-auto pb-2">
+              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3 active">All Banks</button>
+              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Whole Blood</button>
+              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Platelets</button>
+              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Plasma</button>
             </div>
-            <div class="d-flex justify-content-between align-items-center p-2">
-                <span class="small">Successful Fulfilment</span>
-                <span class="text-success fw-bold">96%</span>
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
+                <div>
+                  <p class="mb-0 fw-bold">Max Super Speciality</p>
+                  <small class="text-muted">Verified Partner • 2.1 km</small>
+                </div>
+                <span class="badge bg-success rounded-pill">Stock: High</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
+                <div>
+                  <p class="mb-0 fw-bold">AIIMS Trauma Centre</p>
+                  <small class="text-muted">Govt Partner • 4.5 km</small>
+                </div>
+                <span class="badge bg-warning text-dark rounded-pill">Stock: Medium</span>
+              </div>
             </div>
-        </div>
-
-        <button class="btn btn-danger w-100 rounded-pill py-3 fw-bold mt-2">Contact Organization</button>
-    </div>
-</div>
-            
-            <div class="jd-card p-4">
-                <div class="calendar-header">
-                    <h5 class="fw-bold mb-0">Donation Camp Calendar</h5>
-                    <div class="pill-toggle">
-                        <button class="pill-btn active">Month</button>
-                        <button class="pill-btn">Week</button>
-                        <button class="pill-btn">List</button>
-                    </div>
-                </div>
-                <div class="calendar-grid text-center mb-3">
-                    <div class="text-muted small fw-bold">Mon</div><div class="text-muted small fw-bold">Tue</div><div class="text-muted small fw-bold">Wed</div><div class="text-muted small fw-bold">Thu</div><div class="text-muted small fw-bold">Fri</div><div class="text-muted small fw-bold">Sat</div><div class="text-muted small fw-bold">Sun</div>
-                    <div class="day-cell text-muted">28</div><div class="day-cell text-muted">29</div><div class="day-cell text-muted">30</div><div class="day-cell">1</div><div class="day-cell active-camp">2</div><div class="day-cell">3</div><div class="day-cell">4</div>
-                    <div class="day-cell">5</div><div class="day-cell active-camp">6</div><div class="day-cell">7</div><div class="day-cell">8</div><div class="day-cell">9</div><div class="day-cell active-camp">10</div><div class="day-cell">11</div>
-                </div>
-                <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge bg-danger rounded-pill mb-1">Recommended for You</span>
-                        <p class="mb-0 fw-bold">Mega Drive - Apollo Hospital</p>
-                        <small class="text-muted">10 Oct | 5.2 km away | Whole Blood & Platelets</small>
-                    </div>
-                    <button class="btn btn-danger btn-sm rounded-pill px-4">Register Slot</button>
-                </div>
-            </div>
-
-            
-
-            <h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
-            <div class="camp-slider mb-4">
-                <div class="camp-card shadow-sm">
-                    <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=600');"></div>
-                    <div class="p-3">
-                        <span class="text-muted small fw-bold">RED CROSS SOCIETY</span>
-                        <h6 class="fw-bold mb-2">Corporate Drive, Sector 62</h6>
-                        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
-                    </div>
-                </div>
-                <div class="camp-card shadow-sm">
-                    <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1579152276502-545a248a6a61?auto=format&fit=crop&q=80&w=600');"></div>
-                    <div class="p-3">
-                        <span class="text-muted small fw-bold">GOVT HOSPITAL</span>
-                        <h6 class="fw-bold mb-2">Weekend Rural Outreach</h6>
-                        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="jd-card p-4">
-                <h5 class="fw-bold mb-3">Verified Partner Banks Nearby</h5>
-                <div class="d-flex gap-2 mb-3 overflow-auto pb-2">
-                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3 active">All Banks</button>
-                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Whole Blood</button>
-                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Platelets</button>
-                    <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Plasma</button>
-                </div>
-                <div class="list-group list-group-flush">
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
-                        <div>
-                            <p class="mb-0 fw-bold">Max Super Speciality</p>
-                            <small class="text-muted">Verified Partner • 2.1 km</small>
-                        </div>
-                        <span class="badge bg-success rounded-pill">Stock: High</span>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
-                        <div>
-                            <p class="mb-0 fw-bold">AIIMS Trauma Centre</p>
-                            <small class="text-muted">Govt Partner • 4.5 km</small>
-                        </div>
-                        <span class="badge bg-warning text-dark rounded-pill">Stock: Medium</span>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="jd-card p-4 border-start border-5 border-danger">
-                <div class="d-flex justify-content-between mb-3">
-                    <h5 class="fw-bold text-danger mb-0">Emergency Need</h5>
-                    <span class="spinner-grow spinner-grow-sm text-danger"></span>
-                </div>
-                <p class="small">O+ Blood Required urgently at <strong>City Hospital</strong>. 3 units needed by tonight.</p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-danger btn-sm flex-grow-1 rounded-pill">Accept</button>
-                    <button class="btn btn-light btn-sm flex-grow-1 rounded-pill">Decline</button>
-                </div>
+          <!-- Emergency — HARDCODED (kept as is) -->
+          <div class="jd-card p-4 border-start border-5 border-danger">
+            <div class="d-flex justify-content-between mb-3">
+              <h5 class="fw-bold text-danger mb-0">Emergency Need</h5>
+              <span class="spinner-grow spinner-grow-sm text-danger"></span>
             </div>
-            <div class="jd-card p-4 text-center">
-                <h5 class="fw-bold mb-3">Eligibility Status</h5>
-                <div class="eligibility-check shadow-sm"><i class="fa-solid fa-check"></i></div>
-                <p class="fw-bold mb-1">Ready to Donate!</p>
-                <p class="small text-muted mb-3">You completed your cooldown of 90 days. Health markers (Hb/BP) look optimal.</p>
-                <button class="btn btn-danger w-100 rounded-pill py-2">Quick Health Pre-Check</button>
+            <p class="small">O+ Blood Required urgently at <strong>City Hospital</strong>. 3 units needed by tonight.</p>
+            <div class="d-flex gap-2">
+              <button class="btn btn-danger btn-sm flex-grow-1 rounded-pill">Accept</button>
+              <button class="btn btn-light btn-sm flex-grow-1 rounded-pill">Decline</button>
             </div>
+          </div>
 
-            <div class="jd-card p-4">
-                <h5 class="fw-bold mb-3">Achievements</h5>
-                <div class="d-flex flex-wrap gap-3 justify-content-center">
-                    <div class="text-center" style="width: 70px;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-100 mb-1" alt="badge">
-                        <small class="d-block x-small fw-bold">Hero</small>
-                    </div>
-                    <div class="text-center" style="width: 70px;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
-                        <small class="d-block x-small">Reliable</small>
-                    </div>
-                    <div class="text-center" style="width: 70px;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
-                        <small class="d-block x-small">Fast Help</small>
-                    </div>
-                </div>
+          <!-- Profile Card — FROM API -->
+          <div class="jd-card p-4">
+            <h5 class="fw-bold mb-3">My Profile</h5>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="stat-icon" style="width:55px;height:55px;font-size:1.4rem;flex-shrink:0;">
+                <i class="fa-solid fa-user"></i>
+              </div>
+              <div>
+                <p class="fw-bold mb-0">{{ donor.name }}</p>
+                <small class="text-muted">@{{ donor.username }}</small>
+              </div>
             </div>
+            <div class="p-3 bg-light rounded-4">
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <small class="text-muted">Email</small>
+                <small class="fw-bold">{{ donor.email }}</small>
+              </div>
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <small class="text-muted">Phone</small>
+                <small class="fw-bold">{{ donor.phone_number || 'Not set' }}</small>
+              </div>
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <small class="text-muted">Blood Group</small>
+                <small class="fw-bold text-danger">{{ donor.blood_group }}</small>
+              </div>
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <small class="text-muted">Address</small>
+                <small class="fw-bold">{{ donor.address || 'Not set' }}</small>
+              </div>
+              <div class="d-flex justify-content-between py-1">
+                <small class="text-muted">Requests Raised</small>
+                <small class="fw-bold">{{ donor.total_requests_raised }}</small>
+              </div>
+            </div>
+          </div>
 
+          <!-- Eligibility — FROM API (reliability_score + total_donations) -->
+          <div class="jd-card p-4 text-center">
+            <h5 class="fw-bold mb-3">Eligibility Status</h5>
+            <div class="eligibility-check shadow-sm">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <p class="fw-bold mb-1">Ready to Donate!</p>
+            <p class="small text-muted mb-3">
+              Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
+              Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✅' : '❌' }}</strong>
+            </p>
+            <button class="btn btn-danger w-100 rounded-pill py-2">Quick Health Pre-Check</button>
+          </div>
+
+          <!-- Achievements — HARDCODED (kept as is) -->
+          <div class="jd-card p-4">
+            <h5 class="fw-bold mb-3">Achievements</h5>
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+              <div class="text-center" style="width: 70px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-100 mb-1" alt="badge">
+                <small class="d-block x-small fw-bold">Hero</small>
+              </div>
+              <div class="text-center" style="width: 70px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
+                <small class="d-block x-small">Reliable</small>
+              </div>
+              <div class="text-center" style="width: 70px;">
+                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
+                <small class="d-block x-small">Fast Help</small>
+              </div>
+            </div>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div class="emergency-banner mb-5 text-center shadow-lg">
+      <!-- Emergency Banner — HARDCODED (kept as is) -->
+      <div class="emergency-banner mb-5 text-center shadow-lg">
         <h3 class="fw-bold">In Need of Blood?</h3>
         <p class="mb-4">Raise a verified emergency request to reach 25,000+ donors instantly.</p>
         <button class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-danger">Start Emergency Request</button>
+      </div>
     </div>
-
-    
-</div>
-
-
+  </div>
 </template>
+
+<script>
+export default {
+  name: 'Dashboard',
+
+  data() {
+    return {
+      donor: {},
+      loading: true,
+      error: null,
+      partnerRequests: [],
+      requestsLoading: true,
+    }
+  },
+  mounted() {
+  this.fetchProfile()
+},
+
+  methods: {
+    async fetchProfile() {
+      this.loading = true
+      this.error = null
+
+      const token = localStorage.getItem('access_token')
+
+      if (!token) {
+        this.$router.push('/')
+        return
+      }
+
+      try {
+        const response = await fetch('http://localhost:8000/api/users/profile/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!response.ok) throw new Error('Failed to fetch profile')
+
+        this.donor = await response.json()
+        await this.fetchPartnerRequests()  // ✅ called AFTER donor data is ready
+
+      } catch (err) {
+        this.error = 'Could not load your profile. Please try again.'
+        console.error(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async fetchPartnerRequests() {
+  this.requestsLoading = true
+  try {
+    const bg = this.donor.blood_group || ''
+    const coords = await this.getCoordinates()
+
+    // ✅ Only use live GPS — never fall back to DB coordinates
+    const lat = coords?.lat || ''
+    const lon = coords?.lon || ''
+
+    const url = `http://localhost:8000/api/requests/donor/list/?blood_group=${bg}&lat=${lat}&lon=${lon}`
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+
+    if (!response.ok) throw new Error('Failed')
+    const data = await response.json()
+    this.partnerRequests = Array.isArray(data) ? data : []
+
+  } catch (err) {
+    this.partnerRequests = []
+    console.error(err)
+  } finally {
+    this.requestsLoading = false
+  }
+},
+
+getCoordinates() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude
+      }),
+      () => resolve(null)  
+    )
+  })
+},
+
+    timeAgo(dateStr) {
+      const diff = Math.floor((new Date() - new Date(dateStr)) / 60000)
+      if (diff < 60) return `${diff} mins ago`
+      if (diff < 1440) return `${Math.floor(diff / 60)} hrs ago`
+      return `${Math.floor(diff / 1440)} days ago`
+    },
+
+    formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      })
+    },
+
+    isExpiringSoon(dateStr) {
+      const hoursLeft = (new Date(dateStr) - new Date()) / 36e5
+      return hoursLeft < 12
+    },
+
+    logout() {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      this.$router.push('/')
+    }
+  },
+
+  }
+</script>

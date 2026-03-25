@@ -16,6 +16,7 @@ from partners.models import Partners
 import jwt
 import os
 from notifications.helpers import notify_nearby_donors
+from users.location import get_nearby_partners, get_nearby_donors
 
 
 # ── helper — decode token ────────────────────────────
@@ -165,25 +166,56 @@ class PartnerDonorRequestCreateView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+
 class PartnerDonorRequestListView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        # Open requests visible to all nearby donors
-        requests = PartnerDonorRequest.objects.filter(
-            status='open'
-        ).order_by('-created_at')
+    DEFAULT_RADIUS_KM = 10      
+    FALLBACK_RADIUS_KM = 50    
 
+    def get(self, request):
+        donor_lat   = request.query_params.get('lat')
+        donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
-        city = request.query_params.get('city')
+
+        open_requests = PartnerDonorRequest.objects.filter(
+            status='open'
+        ).select_related('partner').order_by('-created_at')
 
         if blood_group:
-            requests = requests.filter(blood_group=blood_group)
-        if city:
-            requests = requests.filter(partner__city__icontains=city)
+            open_requests = open_requests.filter(blood_group=blood_group)
 
+        if donor_lat and donor_lon:
+            partners_in_requests = list(set([req.partner for req in open_requests]))
+
+            nearby_partners = get_nearby_partners(
+                donor_lat, donor_lon,
+                partners_in_requests,
+                radius_km=self.DEFAULT_RADIUS_KM  
+            )
+
+            distance_map = {
+                item['partner'].id: item['distance_km']
+                for item in nearby_partners
+            }
+            nearby_partner_ids = list(distance_map.keys())
+
+            open_requests = open_requests.filter(partner_id__in=nearby_partner_ids)
+
+            data = PartnerDonorRequestPublicSerializer(open_requests, many=True).data
+            for item in data:
+                partner_id = next(
+                    (req.partner_id for req in open_requests if req.id == item['id']),
+                    None
+                )
+                item['distance_km'] = distance_map.get(partner_id, None)
+
+            data = sorted(data, key=lambda x: x['distance_km'] or 999)
+            return Response(data)
+
+        
         return Response(
-            PartnerDonorRequestPublicSerializer(requests, many=True).data
+            PartnerDonorRequestPublicSerializer(open_requests, many=True).data
         )
 
 

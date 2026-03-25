@@ -33,7 +33,7 @@ class PartnerRegisterSerializer(serializers.ModelSerializer):
 
 
 class PartnerLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()         # partners login with email
+    license_id = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
 

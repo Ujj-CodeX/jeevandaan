@@ -41,7 +41,7 @@ const routes =[
         path:'/partnersdash',
         name: 'partnersdash',
         component : partnersdash,
-        meta: { hideFooter: true ,title: 'JeevanDaan+ | Partner'}
+        meta: { title: 'JeevanDaan+ | Partner'}
 
     },
     {

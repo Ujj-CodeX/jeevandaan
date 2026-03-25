@@ -164,26 +164,29 @@ class PartnerLoginView(APIView):
         serializer = PartnerLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email= serializer.validated_data['email']
+        license_id = serializer.validated_data['license_id']   # ← changed
         password = serializer.validated_data['password']
+
         try:
-            partner = Partners.objects.get(email=email)
+            partner = Partners.objects.get(license_id=license_id)  # ← get by license_id
         except Partners.DoesNotExist:
             return Response(
-                {'error': 'Invalid email or password.'},
+                {'error': 'Invalid License ID or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
+            )
 
-            )
-        if not bcrypt.checkpw(password.encode('utf-8'), partner.password.encode('utf-8')):
+        if not bcrypt.checkpw(password.encode(), partner.password.encode()):
             return Response(
-                {'error': 'Invalid email or password.'},
+                {'error': 'Invalid License ID or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
         if not partner.is_live:
             return Response(
-                {'error': 'Your account is not live yet. Please wait for approval.'},
+                {'error': 'Account not verified yet. Please wait for admin approval.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+
         tokens = generate_partner_token(partner.id)
         return Response({
             'message': 'Login successful.',
