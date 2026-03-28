@@ -10,7 +10,13 @@
 
         <div class="col-md-7 login-side">
           <div class="brand-logo">
-            <i class="fa-solid fa-heart-pulse"></i> JeevanDaan+
+            <img 
+    src="@/assets/L1.png" 
+    alt="JeevanDaan Logo" 
+    width="32" 
+    height="32" 
+    class="me-2 d-inline-block align-top logo-icon"
+  > JeevanDaan+
           </div>
           <h2 class="fw-bold">Create Account</h2>
           <p class="text-muted small mb-4">Be a part of India's fastest growing digital life-saving network.</p>

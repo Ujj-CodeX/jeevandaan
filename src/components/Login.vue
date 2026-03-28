@@ -2,7 +2,13 @@
 <template>
   <div class="card main-card">
     <div class="brand-logo">
-      <i class="fa-solid fa-droplet"></i> JeevanDaan+
+      <img 
+    src="@/assets/L1.png" 
+    alt="JeevanDaan Logo" 
+    width="32" 
+    height="32" 
+    class="me-2 d-inline-block align-top logo-icon"
+  > JeevanDaan+
     </div>
 
     <div class="row g-0">

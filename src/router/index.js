@@ -7,6 +7,7 @@ import partnersdash from '@/components/HospitalDash.vue'
 import partnersreg from '@/components/HospitalReg.vue'
 import partnerslogin from '@/components/HospitalLogin.vue'
 import request1 from '@/components/Request1.vue'
+import learn from '@/components/Learn.vue'
 
 
 
@@ -64,6 +65,12 @@ const routes =[
         component : request1,
         meta: { title: 'JeevanDaan+ | Blood | Request'}
 
+    },
+    {
+        path:'/learn',
+        name: 'learn',
+        component : learn,
+        meta: { title: 'JeevanDaan+ | Learn'}
     }
 
 
