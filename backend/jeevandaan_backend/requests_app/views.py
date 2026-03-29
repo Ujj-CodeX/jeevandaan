@@ -146,8 +146,10 @@ class PartnerDonorRequestCreateView(APIView):
                 # Auto notify nearby donors! ✅
                 notify_nearby_donors(
                     blood_group=req.blood_group,
-                    city=partner.city,
-                    message=f'Urgent! {req.blood_group} blood needed at {partner.hospital_name}. Please donate!'
+                    partner_lat=partner.latitude,
+                    partner_lng=partner.longitude,
+                    message=f'Urgent! {req.blood_group} blood needed at {partner.hospital_name}. Please donate!',
+                    radius_km=10
                 )
 
                 return Response({

@@ -618,10 +618,7 @@ userLng: null,
         { val: '2,400+', label: 'Lives Impacted' },
         { val: '28', label: 'States Active' }
       ],
-      donors: [
-        { id: '#7721', tier: 'PLATINUM', tierClass: 'bg-danger-light text-danger', memberSince: '2022', donations: 24 },
-        { id: '#8904', tier: 'GOLD', tierClass: 'bg-info-light text-info', memberSince: '2023', donations: 16 }
-      ]
+      
     }
   }
 }

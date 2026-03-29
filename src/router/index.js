@@ -71,12 +71,8 @@ const routes =[
         name: 'learn',
         component : learn,
         meta: { title: 'JeevanDaan+ | Learn'}
-    }
-
-
+    },
     
-
-
     
 
 ]

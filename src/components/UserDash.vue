@@ -1,5 +1,34 @@
 
     <style>
+
+    .partner-row {
+    transition: all 0.2s ease;
+    border-radius: 12px;
+    padding: 10px !important;
+}
+.partner-row:hover {
+    background: #fff5f5 !important;
+    transform: translateX(4px);
+}
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+.registration-card {
+    background: white;
+    width: 100%;
+    border-radius: 30px;
+    position: relative;
+    border-top: 6px solid #E63946;
+    max-height: 90vh;
+    overflow-y: auto;
+}
         /* PARTNER REQUESTS CENTER SPECIFIC */
 .request-count-badge {
     background: var(--jd-red);
@@ -139,6 +168,13 @@
   <div>
     <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container">
+        <img 
+    src="@/assets/L1.png" 
+    alt="JeevanDaan Logo" 
+    width="32" 
+    height="32" 
+    class="me-2 d-inline-block align-top logo-icon"
+  >
         <a class="navbar-brand fw-bold text-danger" href="#">JeevanDaan<span class="text-dark">+</span></a>
         <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNav">
           <span class="navbar-toggler-icon"></span>
@@ -147,7 +183,7 @@
           <ul class="navbar-nav mx-auto">
             <li class="nav-item"><RouterLink class="nav-link active" to="/">Home</RouterLink></li>
             <li class="nav-item"><RouterLink class="nav-link" to="/user_request">Raise a Request</RouterLink></li>
-            <li class="nav-item"><a class="nav-link" href="#">Learn More</a></li>
+            <li class="nav-item"><RouterLink class="nav-link" to="/profile">Profile Settings</RouterLink></li>
             <li class="nav-item"><a class="nav-link" href="#" @click.prevent="logout">Logout</a></li>
           </ul>
           <div class="d-flex align-items-center gap-4">
@@ -223,10 +259,58 @@
         </div>
       </div>
 
+
+      <div class="emergency-banner mb-5 text-center shadow-lg">
+        <h3 class="fw-bold">In Need of Blood?</h3>
+        <p class="mb-4">Raise a verified emergency request to reach 25,000+ donors instantly.</p>
+        <router-link to="/user_request" class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-danger">Start Emergency Request</router-link>
+      </div>
+
       <div class="row">
         <div class="col-lg-8">
 
           <div class="mt-5 mb-4">
+
+            <div class="jd-card p-4">
+    <h5 class="fw-bold mb-3">Verified Partner Banks Nearby</h5>
+
+    <!-- Loading -->
+    <div v-if="partnersLoading" class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-danger"></div>
+        <span class="ms-2 text-muted small">Finding nearby banks...</span>
+    </div>
+
+    <!-- Empty -->
+    <div v-else-if="nearbyPartners.length === 0" class="text-center py-3">
+        <i class="fa-solid fa-hospital-slash text-danger mb-2" style="font-size:2rem"></i>
+        <p class="text-muted small mb-0">No verified partners found near you.</p>
+    </div>
+
+    <!-- List -->
+    <div v-else class="list-group list-group-flush">
+        <div
+            v-for="partner in nearbyPartners"
+            :key="partner.id"
+            class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent partner-row"
+            @click="openPartnerDetail(partner)"
+            style="cursor:pointer"
+        >
+            <div>
+                <p class="mb-0 fw-bold">{{ partner.hospital_name }}</p>
+                <small class="text-muted">
+                    {{ partner.partner_type === 'blood_bank' ? 'Blood Bank' : partner.partner_type === 'government' ? 'Govt Partner' : 'Private Partner' }}
+                    • {{ partner.distance_km }} km away
+                </small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span :class="['badge rounded-pill', getStockBadge(partner)]">
+                    {{ getStockLabel(partner) }}
+                </span>
+                <i class="fa-solid fa-chevron-right text-muted small"></i>
+            </div>
+        </div>
+    </div>
+</div>
   <div class="d-flex justify-content-between align-items-end mb-3">
     <div>
       <h5 class="fw-bold mb-0">
@@ -357,48 +441,12 @@
           </div>
 
           <!-- Partner Banks — HARDCODED (kept as is) -->
-          <div class="jd-card p-4">
-            <h5 class="fw-bold mb-3">Verified Partner Banks Nearby</h5>
-            <div class="d-flex gap-2 mb-3 overflow-auto pb-2">
-              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3 active">All Banks</button>
-              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Whole Blood</button>
-              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Platelets</button>
-              <button class="btn btn-light btn-sm rounded-pill text-nowrap px-3">Plasma</button>
-            </div>
-            <div class="list-group list-group-flush">
-              <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
-                <div>
-                  <p class="mb-0 fw-bold">Max Super Speciality</p>
-                  <small class="text-muted">Verified Partner • 2.1 km</small>
-                </div>
-                <span class="badge bg-success rounded-pill">Stock: High</span>
-              </div>
-              <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
-                <div>
-                  <p class="mb-0 fw-bold">AIIMS Trauma Centre</p>
-                  <small class="text-muted">Govt Partner • 4.5 km</small>
-                </div>
-                <span class="badge bg-warning text-dark rounded-pill">Stock: Medium</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          <!-- Verified Partner Banks — FROM API -->
+
+</div>  
 
         <div class="col-lg-4">
-          <!-- Emergency — HARDCODED (kept as is) -->
-          <div class="jd-card p-4 border-start border-5 border-danger">
-            <div class="d-flex justify-content-between mb-3">
-              <h5 class="fw-bold text-danger mb-0">Emergency Need</h5>
-              <span class="spinner-grow spinner-grow-sm text-danger"></span>
-            </div>
-            <p class="small">O+ Blood Required urgently at <strong>City Hospital</strong>. 3 units needed by tonight.</p>
-            <div class="d-flex gap-2">
-              <button class="btn btn-danger btn-sm flex-grow-1 rounded-pill">Accept</button>
-              <button class="btn btn-light btn-sm flex-grow-1 rounded-pill">Decline</button>
-            </div>
-          </div>
-
-          <!-- Profile Card — FROM API -->
+        
           <div class="jd-card p-4">
             <h5 class="fw-bold mb-3">My Profile</h5>
             <div class="d-flex align-items-center gap-3 mb-3">
@@ -434,7 +482,7 @@
             </div>
           </div>
 
-          <!-- Eligibility — FROM API (reliability_score + total_donations) -->
+          
           <div class="jd-card p-4 text-center">
             <h5 class="fw-bold mb-3">Eligibility Status</h5>
             <div class="eligibility-check shadow-sm">
@@ -445,41 +493,187 @@
               Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
               Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✅' : '❌' }}</strong>
             </p>
-            <button class="btn btn-danger w-100 rounded-pill py-2">Quick Health Pre-Check</button>
+            
           </div>
 
           <!-- Achievements — HARDCODED (kept as is) -->
           <div class="jd-card p-4">
-            <h5 class="fw-bold mb-3">Achievements</h5>
-            <div class="d-flex flex-wrap gap-3 justify-content-center">
-              <div class="text-center" style="width: 70px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-100 mb-1" alt="badge">
-                <small class="d-block x-small fw-bold">Hero</small>
-              </div>
-              <div class="text-center" style="width: 70px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
-                <small class="d-block x-small">Reliable</small>
-              </div>
-              <div class="text-center" style="width: 70px;">
-                <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" class="img-fluid opacity-25 mb-1" alt="badge">
-                <small class="d-block x-small">Fast Help</small>
-              </div>
-            </div>
-          </div>
+    <h5 class="fw-bold mb-3">Achievements</h5>
+    <div class="d-flex flex-wrap gap-3 justify-content-center">
+
+        <!-- Hero — 0 to 20 donations -->
+        <div class="text-center" style="width:70px">
+            <img
+                src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png"
+                class="img-fluid mb-1"
+                :class="donor.total_donations >= 1 ? 'opacity-100' : 'opacity-25'"
+                alt="Hero"
+            >
+            <small class="d-block fw-bold" :class="donor.total_donations >= 1 ? 'text-danger' : 'text-muted'">
+                Hero
+            </small>
+            <small class="text-muted" style="font-size:0.65rem">1+ donations</small>
+        </div>
+
+        <!-- Reliable — reliability score > 60 -->
+        <div class="text-center" style="width:70px">
+            <img
+                src="https://cdn-icons-png.flaticon.com/512/1828/1828640.png"
+                class="img-fluid mb-1"
+                :class="donor.reliability_score >= 60 ? 'opacity-100' : 'opacity-25'"
+                alt="Reliable"
+            >
+            <small class="d-block fw-bold" :class="donor.reliability_score >= 60 ? 'text-warning' : 'text-muted'">
+                Reliable
+            </small>
+            <small class="text-muted" style="font-size:0.65rem">Score 60+</small>
+        </div>
+
+        <!-- Fast Helper — 5+ donations -->
+        <div class="text-center" style="width:70px">
+            <img
+                src="https://cdn-icons-png.flaticon.com/512/2583/2583434.png"
+                class="img-fluid mb-1"
+                :class="donor.total_donations >= 5 ? 'opacity-100' : 'opacity-25'"
+                alt="Fast Help"
+            >
+            <small class="d-block fw-bold" :class="donor.total_donations >= 5 ? 'text-info' : 'text-muted'">
+                Fast Help
+            </small>
+            <small class="text-muted" style="font-size:0.65rem">5+ donations</small>
+        </div>
+
+        <!-- Aadhaar Verified -->
+        <div class="text-center" style="width:70px">
+            <img
+                src="https://cdn-icons-png.flaticon.com/512/6941/6941697.png"
+                class="img-fluid mb-1"
+                :class="donor.is_aadhaar_verified ? 'opacity-100' : 'opacity-25'"
+                alt="Verified"
+            >
+            <small class="d-block fw-bold" :class="donor.is_aadhaar_verified ? 'text-success' : 'text-muted'">
+                Verified
+            </small>
+            <small class="text-muted" style="font-size:0.65rem">Aadhaar done</small>
+        </div>
+
+        <!-- Platinum — 10+ donations -->
+        <div class="text-center" style="width:70px">
+            <img
+                src="https://cdn-icons-png.flaticon.com/512/2583/2583454.png"
+                class="img-fluid mb-1"
+                :class="donor.total_donations >= 10 ? 'opacity-100' : 'opacity-25'"
+                alt="Platinum"
+            >
+            <small class="d-block fw-bold" :class="donor.total_donations >= 10 ? 'text-danger' : 'text-muted'">
+                Platinum
+            </small>
+            <small class="text-muted" style="font-size:0.65rem">10+ donations</small>
+        </div>
+
+    </div>
+
+    
+    <div class="mt-3 p-3 bg-light rounded-4 text-center">
+        <small class="text-muted">
+            Reliability Score:
+            <strong :class="donor.reliability_score >= 80 ? 'text-success' : donor.reliability_score >= 50 ? 'text-warning' : 'text-danger'">
+                {{ donor.reliability_score }}/100
+            </strong>
+            — Keep donating to unlock more badges! 🏆
+        </small>
+    </div>
+</div>
         </div>
       </div>
 
-      <!-- Emergency Banner — HARDCODED (kept as is) -->
-      <div class="emergency-banner mb-5 text-center shadow-lg">
-        <h3 class="fw-bold">In Need of Blood?</h3>
-        <p class="mb-4">Raise a verified emergency request to reach 25,000+ donors instantly.</p>
-        <button class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-danger">Start Emergency Request</button>
-      </div>
+    
+      
     </div>
+
+    <!-- Partner Detail Modal -->
+<div v-if="selectedPartner" class="modal-overlay" @click.self="selectedPartner = null">
+    <div class="registration-card shadow-lg" style="max-width:500px">
+        <button class="close-btn" @click="selectedPartner = null">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="card-body p-4">
+            <!-- Header -->
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="stat-icon" style="width:55px;height:55px;font-size:1.4rem;flex-shrink:0">
+                    <i class="fa-solid fa-hospital"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">{{ selectedPartner.hospital_name }}</h5>
+                    <small class="text-muted">{{ selectedPartner.partner_type }}</small>
+                    <span class="badge bg-success ms-2 rounded-pill small">Verified ✓</span>
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div class="p-3 bg-light rounded-4 mb-3">
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted"><i class="fa-solid fa-location-dot me-2 text-danger"></i>Address</small>
+                    <small class="fw-bold text-end" style="max-width:200px">{{ selectedPartner.address }}</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted"><i class="fa-solid fa-city me-2 text-danger"></i>City</small>
+                    <small class="fw-bold">{{ selectedPartner.city }}, {{ selectedPartner.state }}</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted"><i class="fa-solid fa-phone me-2 text-danger"></i>Contact</small>
+                    <small class="fw-bold">{{ selectedPartner.contact }}</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted"><i class="fa-solid fa-route me-2 text-danger"></i>Distance</small>
+                    <small class="fw-bold text-danger">{{ selectedPartner.distance_km }} km away</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted"><i class="fa-solid fa-indian-rupee-sign me-2 text-danger"></i>Convenience Fee</small>
+                    <small class="fw-bold">₹{{ selectedPartner.convenience_fee || '0' }}</small>
+                </div>
+                <div class="d-flex justify-content-between py-2">
+                    <small class="text-muted"><i class="fa-solid fa-notes-medical me-2 text-danger"></i>Facility</small>
+                    <small class="fw-bold text-end" style="max-width:200px">{{ selectedPartner.facility || 'N/A' }}</small>
+                </div>
+            </div>
+
+            <!-- Stock availability -->
+            <div class="mb-4">
+                <p class="fw-bold small mb-2">Blood Stock Status:</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <span
+                        v-for="(qty, group) in selectedPartner.stock_summary"
+                        :key="group"
+                        :class="['badge rounded-pill px-3 py-2', qty > 5 ? 'bg-success' : qty > 0 ? 'bg-warning text-dark' : 'bg-danger']"
+                    >
+                        {{ group }}: {{ qty }} units
+                    </span>
+                    <span v-if="!selectedPartner.stock_summary" class="text-muted small">
+                        Stock info not available
+                    </span>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <router-link to="/user_request" class="btn btn-danger w-100 py-3 fw-bold rounded-4 mb-2">
+                <i class="fa-solid fa-file-medical me-2"></i> Raise Request Here
+            </router-link>
+            <button class="btn btn-light w-100 py-2 rounded-4" @click="selectedPartner = null">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
   </div>
 </template>
 
 <script>
+import api from '@/api/index.js'
 export default {
   name: 'Dashboard',
 
@@ -490,13 +684,72 @@ export default {
       error: null,
       partnerRequests: [],
       requestsLoading: true,
+      nearbyPartners: [],
+partnersLoading: false,
+selectedPartner: null,
     }
   },
   mounted() {
   this.fetchProfile()
+  this.saveGPSLocation()
 },
 
   methods: {
+    async fetchNearbyPartners() {
+    this.partnersLoading = true
+    try {
+        const coords = await this.getCoordinates()
+        const lat = coords?.lat || ''
+        const lng = coords?.lon || ''
+
+        const url = `http://localhost:8000/api/partners/nearby/?lat=${lat}&lng=${lng}&radius=20`
+        const response = await fetch(url)
+        const data = await response.json()
+        this.nearbyPartners = Array.isArray(data) ? data : []
+    } catch (err) {
+        this.nearbyPartners = []
+        console.error(err)
+    } finally {
+        this.partnersLoading = false
+    }
+},
+// In Dashboard.vue — mounted() or after login
+async saveGPSLocation() {
+    if (!navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            try {
+                await api.put('/api/users/profile/', {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude
+                })
+                console.log('GPS location saved ✅')
+            } catch (err) {
+                console.error('Failed to save GPS:', err)
+            }
+        },
+        (err) => console.log('GPS denied:', err)
+    )
+},
+
+openPartnerDetail(partner) {
+    this.selectedPartner = partner
+},
+
+getStockBadge(partner) {
+    const total = partner.available_units || 0
+    if (total > 10) return 'bg-success'
+    if (total > 0) return 'bg-warning text-dark'
+    return 'bg-danger'
+},
+
+getStockLabel(partner) {
+    const total = partner.available_units || 0
+    if (total > 10) return 'Stock: High'
+    if (total > 0) return 'Stock: Low'
+    return 'Stock: Critical'
+},
     async fetchProfile() {
       this.loading = true
       this.error = null
@@ -518,7 +771,8 @@ export default {
         if (!response.ok) throw new Error('Failed to fetch profile')
 
         this.donor = await response.json()
-        await this.fetchPartnerRequests()  // ✅ called AFTER donor data is ready
+        await this.fetchPartnerRequests() 
+        await this.fetchNearbyPartners() 
 
       } catch (err) {
         this.error = 'Could not load your profile. Please try again.'
@@ -529,33 +783,43 @@ export default {
     },
 
     async fetchPartnerRequests() {
-  this.requestsLoading = true
-  try {
-    const bg = this.donor.blood_group || ''
     const coords = await this.getCoordinates()
-
-    // ✅ Only use live GPS — never fall back to DB coordinates
     const lat = coords?.lat || ''
-    const lon = coords?.lon || ''
+    const lng = coords?.lon || ''
+    const bg = this.donor.blood_group || ''
 
-    const url = `http://localhost:8000/api/requests/donor/list/?blood_group=${bg}&lat=${lat}&lon=${lon}`
+    // Backend filters by blood group
+    // Frontend can additionally filter by distance
+    const response = await api.get(
+        `/api/requests/donor/list/?blood_group=${bg}`
+    )
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    })
+    // Filter by distance on frontend
+    if (lat && lng && response.data.length > 0) {
+        this.partnerRequests = response.data.filter(req => {
+            if (!req.latitude || !req.longitude) return true
+            const distance = this.calculateDistance(
+                lat, lng,
+                req.latitude, req.longitude
+            )
+            return distance <= 20  // ← 20km radius
+        })
+    } else {
+        this.partnerRequests = response.data
+    }
+},
 
-    if (!response.ok) throw new Error('Failed')
-    const data = await response.json()
-    this.partnerRequests = Array.isArray(data) ? data : []
-
-  } catch (err) {
-    this.partnerRequests = []
-    console.error(err)
-  } finally {
-    this.requestsLoading = false
-  }
+// Haversine formula on frontend
+calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng/2) * Math.sin(dLng/2)
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 },
 
 getCoordinates() {

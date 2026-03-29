@@ -52,26 +52,44 @@ def notify_donor(donor, trigger, message):
         print(f"Fallback call triggered for {donor.name} ⚠️")
 
 
-def notify_nearby_donors(blood_group, city, message, trigger='donor_request'):
+from geopy.distance import geodesic
+
+def notify_nearby_donors(blood_group, partner_lat, partner_lng, message, radius_km=10):
     """
-    Find nearby donors and notify them
+    Find donors within radius_km of partner location
+    and notify them via SMS + WhatsApp
     """
     from users.models import Donor
 
+    # Get all matching blood group donors
     donors = Donor.objects.filter(
         blood_group=blood_group,
-        address__icontains=city,
         is_locked=False,
+        latitude__isnull=False,    # ← must have GPS location
+        longitude__isnull=False,
     )
 
-    if not donors.exists():
-        print(f"No donors found for {blood_group} in {city}")
-        return 0
-
-    count = 0
+    notified = 0
     for donor in donors:
-        notify_donor(donor, trigger, message)
-        count += 1
+        try:
+            donor_location = (float(donor.latitude), float(donor.longitude))
+            partner_location = (float(partner_lat), float(partner_lng))
 
-    print(f"Notified {count} donors ✅")
-    return count
+            # Calculate distance
+            distance = geodesic(partner_location, donor_location).km
+
+            if distance <= radius_km:
+                # Within range — notify!
+                notify_donor(
+                    donor=donor,
+                    trigger='donor_request',
+                    message=f"{message} — {round(distance, 1)}km from you"
+                )
+                notified += 1
+
+        except Exception as e:
+            print(f"Error notifying donor {donor.id}: {e}")
+            continue
+
+    print(f"Notified {notified} donors within {radius_km}km ✅")
+    return notified
