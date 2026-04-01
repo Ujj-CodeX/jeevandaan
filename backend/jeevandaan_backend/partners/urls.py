@@ -7,6 +7,13 @@ from .views import (
     NearbyPartnersView,      # ← add
     NearbyDonorsView ,
     UpdatePartnerLocationView,
+    CreateCampView,              # ← new
+    ScheduleAndNotifyCampView,   # ← new
+    PartnerCampsView,            # ← new
+    NearbyCampsView,             # ← new
+    EnrollCampView,              # ← new
+    UpdateStockAfterCampView,    # ← new
+    CheckDashboardFreezeView, 
 )
 
 urlpatterns = [
@@ -17,4 +24,12 @@ urlpatterns = [
     path('nearby/', NearbyPartnersView.as_view()),           # ← add
     path('nearby-donors/', NearbyDonorsView.as_view()),
     path('update-location/', UpdatePartnerLocationView.as_view()),
+    # Camp URLs
+    path('camps/', PartnerCampsView.as_view()),
+    path('camps/create/', CreateCampView.as_view()),
+    path('camps/nearby/', NearbyCampsView.as_view()),
+    path('camps/<int:camp_id>/notify/', ScheduleAndNotifyCampView.as_view()),
+    path('camps/<int:camp_id>/enroll/', EnrollCampView.as_view()),
+    path('camps/<int:camp_id>/update-stock/', UpdateStockAfterCampView.as_view()),
+    path('camps/check-freeze/', CheckDashboardFreezeView.as_view()),
 ]

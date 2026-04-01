@@ -109,3 +109,121 @@ class OTPCode(models.Model):
             code = ''.join(random.choices(string.digits, k=6))
             if not OTPCode.objects.filter(code=code).exists():
                 return code
+
+            
+class AttenderRating(models.Model):
+    RATING_CHOICES = [(i, i) for i in range(1, 6)]  # 1 to 5 stars
+
+    COMPLAINT_TYPES = [
+        ('exchange_condition', 'Asked for blood exchange'),
+        ('overcharging', 'Charged extra fees'),
+        ('misbehavior', 'Staff misbehavior'),
+        ('fake_stock', 'Showed wrong stock availability'),
+        ('other', 'Other'),
+    ]
+
+    # Who rated whom
+    attender = models.ForeignKey(
+        'users.Donor',
+        on_delete=models.CASCADE,
+        related_name='ratings_given'
+    )
+    partner = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.CASCADE,
+        related_name='ratings_received'
+    )
+    request = models.OneToOneField(
+        AttenderRequest,
+        on_delete=models.CASCADE,
+        related_name='rating'
+    )
+
+    # Rating
+    stars = models.IntegerField(choices=RATING_CHOICES)
+    review = models.TextField(blank=True, null=True)
+
+    # Complaint
+    has_complaint = models.BooleanField(default=False)
+    complaint_type = models.CharField(
+        max_length=50,
+        choices=COMPLAINT_TYPES,
+        blank=True,
+        null=True
+    )
+    complaint_detail = models.TextField(blank=True, null=True)
+    complaint_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('investigating', 'Investigating'),
+            ('resolved', 'Resolved'),
+            ('dismissed', 'Dismissed'),
+        ],
+        default='pending'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.attender.name} rated {self.partner.hospital_name} — {self.stars}⭐"
+    
+class InterPartnerRequest(models.Model):
+    BLOOD_GROUPS = [
+        ('A+', 'A+'), ('A-', 'A-'),
+        ('B+', 'B+'), ('B-', 'B-'),
+        ('O+', 'O+'), ('O-', 'O-'),
+        ('AB+', 'AB+'), ('AB-', 'AB-'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('fulfilled', 'Fulfilled'),
+        ('rejected', 'Rejected'),
+    ]
+
+    # Bank A requests Bank B
+    requesting_partner = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.CASCADE,
+        related_name='inter_requests_sent'
+    )
+    fulfilling_partner = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.CASCADE,
+        related_name='inter_requests_received'
+    )
+
+    # Linked to original attender request
+    attender_request = models.ForeignKey(
+        AttenderRequest,
+        on_delete=models.CASCADE,
+        related_name='inter_partner_requests'
+    )
+
+    # Blood requirement
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUPS)
+    quantity = models.PositiveIntegerField()
+
+    # Fee — Bank A pays Bank B
+    convenience_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00
+    )
+
+    # Status
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.requesting_partner.hospital_name} → {self.fulfilling_partner.hospital_name} | {self.blood_group}"

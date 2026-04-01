@@ -9,6 +9,7 @@ from .views import (
     DonorCancelRequestView,
     FulfillAttenderRequestView,
     GetRequestOTPView,
+    VerifyOTPView,
 )
 
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     path('donor/<int:request_id>/cancel/', DonorCancelRequestView.as_view()),
     path('attender/<uuid:reference_id>/fulfill/', FulfillAttenderRequestView.as_view()),
     path('otp/<int:request_id>/', GetRequestOTPView.as_view()),
+    path('verify-otp/', VerifyOTPView.as_view()),
 ]

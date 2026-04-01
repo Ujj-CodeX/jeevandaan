@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Partners
 import bcrypt
-
+from .models import DonationCamp, CampEnrollment
 
 class PartnerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -54,3 +54,62 @@ class PartnerPublicSerializer(serializers.ModelSerializer):
             'latitude', 'longitude',
             'is_verified', 'is_live'
         ]
+
+
+
+class DonationCampSerializer(serializers.ModelSerializer):
+    organizer_name = serializers.CharField(
+        source='organizer.hospital_name',
+        read_only=True
+    )
+    enrolled_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DonationCamp
+        fields = [
+            'id', 'title', 'description',
+            'location', 
+            'camp_date', 'start_time', 'end_time',
+            'blood_groups_needed',
+            'expected_donors',
+            'status',
+            'stock_updated_after_camp',
+            'dashboard_frozen',
+            'organizer_name',
+            'enrolled_count',
+            'created_at'
+        ]
+        read_only_fields = [
+            'organizer_name',
+            'enrolled_count',
+            'status',
+            'stock_updated_after_camp',
+            'dashboard_frozen',
+            'created_at',
+            'city',
+            'latitude', 'longitude',
+        ]
+
+    def get_enrolled_count(self, obj):
+        return obj.enrollments.count()
+
+
+class CampEnrollmentSerializer(serializers.ModelSerializer):
+    camp_title = serializers.CharField(
+        source='camp.title',
+        read_only=True
+    )
+    camp_date = serializers.DateField(
+        source='camp.camp_date',
+        read_only=True
+    )
+
+    class Meta:
+        model = CampEnrollment
+        fields = [
+            'id', 'camp', 'camp_title',
+            'camp_date', 'name',
+            'phone', 'blood_group',
+            'attended', 'enrolled_at'
+        ]
+        read_only_fields = ['attended', 'enrolled_at']

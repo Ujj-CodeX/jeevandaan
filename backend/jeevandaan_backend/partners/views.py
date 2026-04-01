@@ -2,12 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Partners
+from .models import Partners,DonationCamp, CampEnrollment
 from .serializers import (
     PartnerRegisterSerializer,
     PartnerLoginSerializer,
     PartnerProfileSerializer,
-    PartnerPublicSerializer
+    PartnerPublicSerializer,
+    DonationCampSerializer, CampEnrollmentSerializer
 )
 import bcrypt
 import jwt
@@ -16,6 +17,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from users.location import get_nearby_partners, get_nearby_donors
 from stock.models import Stock
+from datetime import date
 
 
 
@@ -305,3 +307,282 @@ class UpdatePartnerLocationView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+####################################################################
+# 
+#   Camps Scheduling and Dashobard Freeze Unfreeze APIs 
+#
+#
+####################################################################
+
+
+class CreateCampView(APIView):
+
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can create camps.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            partner = Partners.objects.get(id=payload['id'])
+            serializer = DonationCampSerializer(data=request.data)
+
+            if serializer.is_valid():
+                camp = serializer.save(
+                    organizer=partner,
+                    latitude=partner.latitude,
+                    longitude=partner.longitude,
+                    city=partner.city
+                )
+
+                return Response({
+                    'message': 'Camp created successfully! ✅',
+                    'camp': DonationCampSerializer(camp).data
+                }, status=status.HTTP_201_CREATED)
+
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ── Schedule & Notify ────────────────────────────────
+class ScheduleAndNotifyCampView(APIView):
+
+    def post(self, request, camp_id):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can notify.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get camp
+            camp = DonationCamp.objects.get(
+                id=camp_id,
+                organizer__id=payload['id']
+            )
+
+            # 🔥 Use pipeline
+            from notifications.helpers import notify_camp_donors
+
+            total_notified = notify_camp_donors(camp)
+
+            return Response({
+                'message': f'Camp scheduled! {total_notified} donors notified ✅',
+                'notified_count': total_notified,
+                'camp': DonationCampSerializer(camp).data
+            })
+
+        except DonationCamp.DoesNotExist:
+            return Response(
+                {'error': 'Camp not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        except jwt.InvalidTokenError:
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+# ── Partner's own camps ──────────────────────────────
+class PartnerCampsView(APIView):
+
+    def get(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = Partners.objects.get(id=payload['id'])
+
+            camps = DonationCamp.objects.filter(
+                organizer=partner
+            ).order_by('-camp_date')
+
+            return Response(DonationCampSerializer(camps, many=True).data)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ── Nearby camps — for donors ─────────────────────────
+class NearbyCampsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+
+        # Only upcoming camps
+        camps = DonationCamp.objects.filter(
+            camp_date__gte=date.today(),
+            status='scheduled'
+        ).order_by('camp_date')
+
+        if lat and lng:
+            from users.location import get_nearby_partners
+            # Reuse nearby function with camp locations
+            result = []
+            from geopy.distance import geodesic
+            for camp in camps:
+                if camp.latitude and camp.longitude:
+                    distance = geodesic(
+                        (float(lat), float(lng)),
+                        (float(camp.latitude), float(camp.longitude))
+                    ).km
+                    if distance <= 20:
+                        data = DonationCampSerializer(camp).data
+                        data['distance_km'] = round(distance, 1)
+                        result.append(data)
+            result.sort(key=lambda x: x['distance_km'])
+            return Response(result)
+
+        return Response(DonationCampSerializer(camps, many=True).data)
+
+
+# ── Enroll in camp ────────────────────────────────────
+class EnrollCampView(APIView):
+
+    def post(self, request, camp_id):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            if payload.get('type') != 'donor':
+                return Response(
+                    {'error': 'Only donors can enroll.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            from users.models import Donor
+            donor = Donor.objects.get(id=payload['id'])
+            camp = DonationCamp.objects.get(id=camp_id)
+
+            # Check already enrolled
+            if CampEnrollment.objects.filter(camp=camp, donor=donor).exists():
+                return Response(
+                    {'error': 'Already enrolled in this camp.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check camp date not passed
+            if camp.camp_date < date.today():
+                return Response(
+                    {'error': 'Camp has already passed.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            enrollment = CampEnrollment.objects.create(
+                camp=camp,
+                donor=donor,
+                name=request.data.get('name', donor.name),
+                phone=request.data.get('phone', donor.phone_number),
+                blood_group=request.data.get('blood_group', donor.blood_group)
+            )
+
+            return Response({
+                'message': 'Enrolled successfully! See you at the camp 🩸',
+                'enrollment': CampEnrollmentSerializer(enrollment).data
+            }, status=status.HTTP_201_CREATED)
+
+        except DonationCamp.DoesNotExist:
+            return Response({'error': 'Camp not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ── Update stock after camp ───────────────────────────
+class UpdateStockAfterCampView(APIView):
+
+    def post(self, request, camp_id):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can update stock.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            camp = DonationCamp.objects.get(
+                id=camp_id,
+                organizer__id=payload['id']
+            )
+
+            # Mark stock updated → unfreeze dashboard
+            camp.stock_updated_after_camp = True
+            camp.dashboard_frozen = False
+            camp.status = 'completed'
+            camp.save()
+
+            return Response({
+                'message': 'Stock updated! Dashboard unfrozen ✅',
+                'camp': DonationCampSerializer(camp).data
+            })
+
+        except DonationCamp.DoesNotExist:
+            return Response({'error': 'Camp not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# ── Check dashboard freeze status ────────────────────
+class CheckDashboardFreezeView(APIView):
+
+    def get(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = Partners.objects.get(id=payload['id'])
+
+            # Check if any past camp without stock update
+            frozen_camp = DonationCamp.objects.filter(
+                organizer=partner,
+                camp_date__lt=date.today(),
+                stock_updated_after_camp=False,
+                status='scheduled'
+            ).first()
+
+            if frozen_camp:
+                # Auto freeze
+                frozen_camp.dashboard_frozen = True
+                frozen_camp.save()
+
+                return Response({
+                    'is_frozen': True,
+                    'frozen_camp': DonationCampSerializer(frozen_camp).data,
+                    'message': 'Please update stock from your recent donation camp to unlock dashboard.'
+                })
+
+            return Response({'is_frozen': False})
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)

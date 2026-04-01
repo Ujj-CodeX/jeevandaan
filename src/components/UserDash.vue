@@ -384,10 +384,6 @@
           </div>
         </div>
         <div class="d-flex gap-2">
-          <!-- Replace this -->
-<button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
-
-<!-- With this -->
 <button
     class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2"
     @click="acceptRequest(req.id)"
@@ -409,52 +405,102 @@
 
 
           <!-- Calendar — HARDCODED (kept as is) -->
-          <div class="jd-card p-4">
-            <div class="calendar-header">
-              <h5 class="fw-bold mb-0">Donation Camp Calendar</h5>
-              <div class="pill-toggle">
-                <button class="pill-btn active">Month</button>
-                <button class="pill-btn">Week</button>
-                <button class="pill-btn">List</button>
-              </div>
-            </div>
-            <div class="calendar-grid text-center mb-3">
-              <div class="text-muted small fw-bold">Mon</div><div class="text-muted small fw-bold">Tue</div><div class="text-muted small fw-bold">Wed</div><div class="text-muted small fw-bold">Thu</div><div class="text-muted small fw-bold">Fri</div><div class="text-muted small fw-bold">Sat</div><div class="text-muted small fw-bold">Sun</div>
-              <div class="day-cell text-muted">28</div><div class="day-cell text-muted">29</div><div class="day-cell text-muted">30</div><div class="day-cell">1</div><div class="day-cell active-camp">2</div><div class="day-cell">3</div><div class="day-cell">4</div>
-              <div class="day-cell">5</div><div class="day-cell active-camp">6</div><div class="day-cell">7</div><div class="day-cell">8</div><div class="day-cell">9</div><div class="day-cell active-camp">10</div><div class="day-cell">11</div>
-            </div>
-            <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center">
-              <div>
-                <span class="badge bg-danger rounded-pill mb-1">Recommended for You</span>
-                <p class="mb-0 fw-bold">Mega Drive - Apollo Hospital</p>
-                <small class="text-muted">10 Oct | 5.2 km away | Whole Blood & Platelets</small>
-              </div>
-              <button class="btn btn-danger btn-sm rounded-pill px-4">Register Slot</button>
-            </div>
-          </div>
+          
 
-          <!-- Nearby Camps — HARDCODED (kept as is) -->
-          <h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
-          <div class="camp-slider mb-4">
-            <div class="camp-card shadow-sm">
-              <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=600');"></div>
-              <div class="p-3">
-                <span class="text-muted small fw-bold">RED CROSS SOCIETY</span>
-                <h6 class="fw-bold mb-2">Corporate Drive, Sector 62</h6>
-                <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
-              </div>
-            </div>
-            <div class="camp-card shadow-sm">
-              <div class="camp-img" style="background-image: url('https://images.unsplash.com/photo-1579152276502-545a248a6a61?auto=format&fit=crop&q=80&w=600');"></div>
-              <div class="p-3">
-                <span class="text-muted small fw-bold">GOVT HOSPITAL</span>
-                <h6 class="fw-bold mb-2">Weekend Rural Outreach</h6>
-                <button class="btn btn-outline-danger btn-sm w-100 rounded-pill">Enroll Now</button>
-              </div>
-            </div>
-          </div>
 
-          <!-- Partner Banks — HARDCODED (kept as is) -->
+
+
+
+
+
+          <!-- Nearby Camps — FROM API -->
+<h5 class="fw-bold mb-3 mt-4">Discover Nearby Camps</h5>
+
+<div v-if="campsLoading" class="text-center py-3">
+    <div class="spinner-border spinner-border-sm text-danger"></div>
+</div>
+
+<div v-else-if="nearbyCamps.length === 0" class="jd-card p-4 text-center text-muted">
+    <i class="fas fa-campground fa-2x mb-2 opacity-25"></i>
+    <p class="small mb-0">No camps scheduled near you right now.</p>
+</div>
+
+<div v-else class="camp-slider mb-4">
+    <div class="camp-card shadow-sm" v-for="camp in nearbyCamps" :key="camp.id">
+        <div class="camp-img"
+            style="background-image: url('https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=600')">
+        </div>
+        <div class="p-3">
+            <span class="text-muted small fw-bold">{{ camp.organizer_name?.toUpperCase() }}</span>
+            <h6 class="fw-bold mb-1 mt-1">{{ camp.title }}</h6>
+            <p class="text-muted small mb-1">
+                <i class="fas fa-calendar me-1 text-danger"></i>{{ camp.camp_date }}
+            </p>
+            <p class="text-muted small mb-2">
+                <i class="fas fa-location-dot me-1 text-danger"></i>{{ camp.location }}
+                <span v-if="camp.distance_km" class="ms-1 fw-bold text-danger">
+                    ({{ camp.distance_km }}km)
+                </span>
+            </p>
+            <div class="d-flex flex-wrap gap-1 mb-3">
+                <span v-for="bg in camp.blood_groups_needed" :key="bg"
+                    class="badge bg-danger bg-opacity-10 text-danger rounded-pill small">
+                    {{ bg }}
+                </span>
+            </div>
+            <button
+                class="btn btn-outline-danger btn-sm w-100 rounded-pill fw-bold"
+                @click="openEnrollModal(camp)"
+            >
+                <i class="fas fa-user-plus me-1"></i> Enroll Now
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Enroll Modal -->
+<div v-if="showEnrollModal" class="modal-overlay" @click.self="showEnrollModal = false">
+    <div class="registration-card shadow-lg" style="max-width:450px">
+        <button class="close-btn" @click="showEnrollModal = false">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-1">Enroll in Camp</h5>
+            <p class="text-muted small mb-4">{{ selectedCamp?.title }}</p>
+
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Your Name</label>
+                <input type="text" class="form-control" v-model="enrollForm.name">
+            </div>
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Phone Number</label>
+                <input type="tel" class="form-control" v-model="enrollForm.phone">
+            </div>
+            <div class="mb-4">
+                <label class="small fw-bold text-muted">Blood Group</label>
+                <select class="form-select" v-model="enrollForm.blood_group">
+                    <option v-for="bg in ['A+','A-','B+','B-','O+','O-','AB+','AB-']" :key="bg">
+                        {{ bg }}
+                    </option>
+                </select>
+            </div>
+
+            <button
+                class="btn btn-danger w-100 py-3 fw-bold rounded-4"
+                @click="enrollInCamp"
+                :disabled="enrolling"
+            >
+                <span v-if="enrolling">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Enrolling...
+                </span>
+                <span v-else>
+                    <i class="fas fa-check me-2"></i> Confirm Enrollment
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
           <!-- Verified Partner Banks — FROM API -->
 
 </div>  
@@ -813,6 +859,16 @@ selectedRequest: null,
 acceptingId: null,
 acceptedOTP: null,
 acceptedRequestId: null,
+nearbyCamps: [],
+campsLoading: false,
+showEnrollModal: false,
+selectedCamp: null,
+enrollForm: {
+    name: '',
+    phone: '',
+    blood_group: ''
+},
+enrolling: false,
     }
   },
   mounted() {
@@ -899,6 +955,7 @@ getStockLabel(partner) {
         this.donor = await response.json()
         await this.fetchPartnerRequests() 
         await this.fetchNearbyPartners() 
+        await this.fetchNearbyCamps()
 
       } catch (err) {
         this.error = 'Could not load your profile. Please try again.'
@@ -1045,7 +1102,52 @@ goToChat() {
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       this.$router.push('/')
+    },
+    // ── Open camp enrollment modal ───────────────────────
+    async fetchNearbyCamps() {
+    this.campsLoading = true
+    try {
+        const coords = await this.getCoordinates()
+        const lat = coords?.lat || ''
+        const lng = coords?.lon || ''
+
+        const response = await api.get(
+            `/api/partners/camps/nearby/?lat=${lat}&lng=${lng}`
+        )
+        this.nearbyCamps = Array.isArray(response.data) ? response.data : []
+    } catch (err) {
+        this.nearbyCamps = []
+    } finally {
+        this.campsLoading = false
     }
+},
+
+openEnrollModal(camp) {
+    this.selectedCamp = camp
+    this.enrollForm = {
+        name: this.donor.name || '',
+        phone: this.donor.phone_number || '',
+        blood_group: this.donor.blood_group || ''
+    }
+    this.showEnrollModal = true
+},
+
+async enrollInCamp() {
+    this.enrolling = true
+    try {
+        await api.post(
+            `/api/partners/camps/${this.selectedCamp.id}/enroll/`,
+            this.enrollForm
+        )
+        alert('Enrolled successfully! See you at the camp 🩸')
+        this.showEnrollModal = false
+        await this.fetchNearbyCamps()
+    } catch (err) {
+        alert(err.response?.data?.error || 'Enrollment failed.')
+    } finally {
+        this.enrolling = false
+    }
+},
   },
 
   }

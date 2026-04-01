@@ -20,10 +20,21 @@ class AttenderRequestPublicSerializer(serializers.ModelSerializer):
         model = AttenderRequest
         fields = [
             'reference_id',
+            'patient_name',      # Added
+            'patient_age',       # Added
+            'patient_photo',     # Added
             'blood_group',
             'quantity',
             'urgency',
             'hospital_name',
+            'doctor_name',       # Added
+            'doctor_phone',      # Added
+            'attender_name',     # Added
+            'attender_phone',    # Added
+            'id_type',           # Added
+            'id_no',             # Added
+            'doctor_letterhead', # Added
+            'attender_id_proof', # Added
             'city',
             'status',
             'created_at',

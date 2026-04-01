@@ -93,3 +93,41 @@ def notify_nearby_donors(blood_group, partner_lat, partner_lng, message, radius_
 
     print(f"Notified {notified} donors within {radius_km}km ✅")
     return notified
+
+def notify_camp_donors(camp):
+    from users.models import Donor
+    from users.location import get_nearby_donors
+
+    donors = Donor.objects.filter(
+        is_locked=False,
+        latitude__isnull=False,
+        longitude__isnull=False
+    )
+
+    if camp.blood_groups_needed:
+        donors = donors.filter(
+            blood_group__in=camp.blood_groups_needed
+        )
+
+    nearby = get_nearby_donors(
+        camp.latitude,
+        camp.longitude,
+        donors,
+        radius_km=20
+    )
+
+    message = f"A nearby blood donation camp is scheduled at {camp.location} on {camp.camp_date}. Timings: {camp.start_time}–{camp.end_time}. Enroll now via Dashboard!"
+    notified = 0
+
+    for item in nearby:
+        donor = item['donor']   
+
+        notify_donor(
+            donor=donor,
+            trigger='camp_notification',
+            message=message
+        )
+
+        notified += 1
+
+    return notified

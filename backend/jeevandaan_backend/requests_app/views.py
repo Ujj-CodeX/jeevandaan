@@ -420,3 +420,48 @@ class GetRequestOTPView(APIView):
                 {'error': 'Invalid token.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+class VerifyOTPView(APIView):
+    """Partner verifies donor OTP at bank"""
+
+    def post(self, request):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can verify OTP.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            otp_code = request.data.get('otp_code')
+            if not otp_code:
+                return Response(
+                    {'error': 'OTP code is required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                otp = OTPCode.objects.get(code=otp_code, is_used=False)
+            except OTPCode.DoesNotExist:
+                return Response(
+                    {'error': 'Invalid or already used OTP.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Mark OTP as used
+            from django.utils import timezone
+            otp.is_used = True
+            otp.used_at = timezone.now()
+            otp.save()
+
+            return Response({
+                'message': 'OTP verified successfully! ✅',
+                'request_id': otp.request.id,
+                'blood_group': otp.request.blood_group,
+                'quantity': otp.request.quantity,
+            })
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)

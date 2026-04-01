@@ -9,7 +9,7 @@ import partnerslogin from '@/components/HospitalLogin.vue'
 import request1 from '@/components/Request1.vue'
 import learn from '@/components/Learn.vue'
 import Chat from '@/components/Chat.vue'
-
+import RequestSuccess from '@/components/RequestSuccess.vue'
 
 
 
@@ -79,7 +79,12 @@ const routes =[
     name: 'Chat',
     component: Chat,
     meta: { title: 'JeevanDaan+ | Chat'}
-  }
+  },
+  {
+        path: '/request-success',
+        name: 'RequestSuccess',
+        component: RequestSuccess
+    },
     
     
 

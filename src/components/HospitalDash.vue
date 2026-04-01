@@ -278,7 +278,7 @@
         <!-- VIEW ATTENDER                      -->
         <!-- ══════════════════════════════════ -->
         <section v-if="activeTab === 'view-attender'" class="animate-fade">
-          <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mb-4 sky-gradient text-white">
+  <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mb-4 sky-gradient text-white">
             <h4 class="fw-800">Attender Request Lookup</h4>
             <p class="opacity-75">Search by Reference ID or browse all pending requests.</p>
             <div class="input-group mt-4 mx-auto shadow-lg rounded-pill overflow-hidden" style="max-width:500px">
@@ -312,41 +312,104 @@
             <div v-if="searchError" class="mt-3 alert alert-danger border-0 rounded-4">{{ searchError }}</div>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">All Pending Requests <span class="badge bg-sky ms-2">{{ attenderRequests.length }}</span></h6>
-            <button class="btn btn-sky-outline btn-sm rounded-pill px-3" @click="fetchAttenderRequests"><i class="fas fa-sync me-1"></i> Refresh</button>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="fw-bold mb-0">All Pending Requests <span class="badge bg-sky ms-2">{{ attenderRequests.length }}</span></h6>
+    <button class="btn btn-sky-outline btn-sm rounded-pill px-3" @click="fetchAttenderRequests"><i class="fas fa-sync me-1"></i> Refresh</button>
+  </div>
+
+  <div v-if="attenderLoading" class="text-center py-4"><div class="spinner-border text-sky"></div></div>
+  <div v-else-if="attenderRequests.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center">
+    <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
+    <h6 class="fw-bold">No Pending Requests</h6>
+  </div>
+
+  <div v-else class="row g-3">
+    <div class="col-md-6" v-for="req in attenderRequests" :key="req.reference_id">
+      <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="badge bg-light text-sky border smallest">REF: {{ req.reference_id?.substring(0, 8) }}</span>
+          <span :class="['badge rounded-pill', req.urgency === 'critical' ? 'bg-danger' : 'bg-success']">{{ req.urgency?.toUpperCase() }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <span class="fw-800 text-danger h3 mb-0">{{ req.blood_group }}</span>
+          <div>
+            <h6 class="fw-bold mb-0">{{ req.patient_name }}</h6>
+            <small class="text-muted">{{ req.hospital_name }} • {{ req.quantity }} Units</small>
           </div>
-          <div v-if="attenderLoading" class="text-center py-4"><div class="spinner-border text-sky"></div></div>
-          <div v-else-if="attenderRequests.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center">
-            <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
-            <h6 class="fw-bold">No Pending Requests</h6>
-            <p class="text-muted small">No attender requests found in your area right now.</p>
-          </div>
-          <div v-else class="row g-3">
-            <div class="col-md-6" v-for="req in attenderRequests" :key="req.reference_id">
-              <div class="card border-0 shadow-sm rounded-4 p-3">
-                <div class="d-flex justify-content-between mb-2">
-                  <span class="badge bg-light text-sky border smallest">REF: {{ req.reference_id?.substring(0, 8) }}...</span>
-                  <span :class="['badge rounded-pill', req.urgency === 'critical' ? 'bg-danger' : req.urgency === 'urgent' ? 'bg-warning text-dark' : 'bg-success']">{{ req.urgency?.toUpperCase() }}</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                  <span class="fw-800 text-danger h4 mb-0">{{ req.blood_group }}</span>
-                  <div>
-                    <h6 class="fw-bold mb-0">{{ req.hospital_name }}</h6>
-                    <small class="text-muted">{{ req.quantity }} units needed</small>
-                  </div>
-                </div>
-                <div class="d-flex justify-content-between text-muted small mb-3">
-                  <span><i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ req.city }}</span>
-                  <span><i class="far fa-clock me-1"></i>{{ timeAgo(req.created_at) }}</span>
-                </div>
-                <button class="btn btn-sky btn-sm fw-bold w-100 rounded-3" @click="prefillSearch(req.reference_id)">
-                  <i class="fas fa-search me-1"></i> Verify & Fulfill
-                </button>
+        </div>
+        <button class="btn btn-sky btn-sm fw-bold w-100 rounded-3 py-2" @click="selectedRequest = req">
+          <i class="fas fa-id-card-alt me-2"></i> Verify Documents
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="selectedRequest" class="modal-backdrop d-flex align-items-center justify-content-center p-3 z-3">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden w-100 animate-slide-up" style="max-width: 750px; max-height: 92vh;">
+      
+      <div class="bg-dark p-3 d-flex justify-content-between align-items-center text-white">
+        <div>
+          <small class="text-uppercase opacity-75 d-block" style="font-size: 0.65rem; letter-spacing: 1px;">Reference Key for Verification</small>
+          <span class="fw-mono fw-bold text-sky-light">{{ selectedRequest.reference_id }}</span>
+          <button @click="copyRef(selectedRequest.reference_id)" class="btn btn-sm btn-link text-sky p-0 ms-2">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+        <button class="btn btn-link text-white p-0" @click="selectedRequest = null"><i class="fas fa-times fs-4"></i></button>
+      </div>
+      
+      <div class="card-body overflow-auto p-4">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-sky border-bottom pb-2 mb-3 small text-uppercase">Patient & Attender</h6>
+            
+            <div class="d-flex align-items-center mb-3 bg-light p-2 rounded-3 border">
+              <img :src="selectedRequest.patient_photo" class="rounded-circle me-3 border" style="width:55px; height:55px; object-fit:cover;">
+              <div>
+                <h6 class="mb-0 fw-bold">{{ selectedRequest.patient_name }} ({{ selectedRequest.patient_age }}y)</h6>
+                <p class="smallest text-muted mb-0">Needs {{ selectedRequest.blood_group }} at {{ selectedRequest.hospital_name }}</p>
               </div>
             </div>
+
+            <div class="small p-2">
+              <p class="mb-2"><strong>Attender:</strong> {{ selectedRequest.attender_name }}</p>
+              <p class="mb-2"><strong>Contact:</strong> {{ selectedRequest.attender_phone }}</p>
+              <p class="mb-2"><strong>{{ selectedRequest.id_type }}:</strong> {{ selectedRequest.id_no }}</p>
+              <p class="mb-0"><strong>Doctor:</strong> Dr. {{ selectedRequest.doctor_name }} ({{ selectedRequest.doctor_phone }})</p>
+            </div>
           </div>
-        </section>
+
+          <div class="col-md-6">
+            <h6 class="fw-bold text-muted border-bottom pb-2 mb-3 small text-uppercase">Document Verification</h6>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="smallest text-muted d-block mb-1">Letterhead</label>
+                <a :href="selectedRequest.doctor_letterhead" target="_blank">
+                  <img :src="selectedRequest.doctor_letterhead" class="img-fluid rounded border hover-zoom shadow-sm">
+                </a>
+              </div>
+              <div class="col-6">
+                <label class="smallest text-muted d-block mb-1">ID Proof</label>
+                <a :href="selectedRequest.attender_id_proof" target="_blank">
+                  <img :src="selectedRequest.attender_id_proof" class="img-fluid rounded border hover-zoom shadow-sm">
+                </a>
+              </div>
+            </div>
+            <div class="alert alert-info py-2 px-3 mt-3 mb-0" style="font-size: 0.75rem;">
+              <i class="fas fa-info-circle me-2"></i>Verify the physical documents against these uploads.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer bg-white p-3 border-top">
+        <button class="btn btn-sky w-100 py-2 fw-bold rounded-3 shadow-sm" @click="selectedRequest = null">
+          OK, I'VE VERIFIED THIS
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
 
         <!-- ══════════════════════════════════ -->
         <!-- VERIFY DONATION                    -->
@@ -441,6 +504,243 @@
             </div>
           </div>
         </section>
+
+
+        <!-- ══════════════════════════════════ -->
+        <!-- DONATION CAMPS                     --> 
+
+<section v-if="activeTab === 'camps'" class="animate-fade">
+
+    <!-- Freeze banner -->
+    <div v-if="isDashboardFrozen" class="alert border-0 rounded-4 p-4 mb-4 text-center"
+        style="background: linear-gradient(135deg, #fff5f5, #ffe0e0)">
+        <i class="fas fa-lock text-danger fa-2x mb-2"></i>
+        <h5 class="fw-bold text-danger">Dashboard Frozen ❄️</h5>
+        <p class="text-muted small mb-3">
+            Please update your stock from the recent donation camp
+            <strong>{{ frozenCamp?.title }}</strong> held on
+            <strong>{{ frozenCamp?.camp_date }}</strong>
+            to unlock your dashboard.
+        </p>
+        <button
+            class="btn btn-danger rounded-pill px-5 fw-bold"
+            @click="goToStockUpdate"
+        >
+            <i class="fas fa-boxes me-2"></i>
+            Update Stock Now
+        </button>
+    </div>
+
+    <div :class="isDashboardFrozen ? 'opacity-50 pe-none' : ''">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0">Donation Camps</h5>
+            <button
+                class="btn btn-sky fw-bold btn-sm rounded-pill px-4"
+                @click="showCreateCamp = true"
+            >
+                <i class="fas fa-plus me-2"></i> Schedule Camp
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div v-if="campsLoading" class="text-center py-4">
+            <div class="spinner-border text-sky"></div>
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="camps.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center">
+            <i class="fas fa-campground text-muted fa-3x mb-3"></i>
+            <h6 class="fw-bold">No Camps Scheduled</h6>
+            <p class="text-muted small">Schedule your first donation camp!</p>
+        </div>
+
+        <!-- Camp cards -->
+        <div v-else class="row g-3">
+            <div class="col-md-6 col-lg-4" v-for="camp in camps" :key="camp.id">
+                <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+
+                    <!-- Status badge -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span :class="['badge rounded-pill', camp.status === 'scheduled' ? 'bg-success' : camp.status === 'completed' ? 'bg-secondary' : 'bg-warning text-dark']">
+                            {{ camp.status }}
+                        </span>
+                        <small class="text-muted smallest">{{ camp.enrolled_count }} enrolled</small>
+                    </div>
+
+                    <!-- Camp info -->
+                    <h6 class="fw-bold mb-1">{{ camp.title }}</h6>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-calendar me-1 text-sky"></i>{{ camp.camp_date }}
+                        <i class="fas fa-clock me-1 text-sky ms-2"></i>{{ camp.start_time }}
+                    </p>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-location-dot me-1 text-sky"></i>{{ camp.location }}
+                    </p>
+
+                    <!-- Blood groups -->
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        <span
+                            v-for="bg in camp.blood_groups_needed"
+                            :key="bg"
+                            class="badge bg-sky-soft text-sky rounded-pill small"
+                        >
+                            {{ bg }}
+                        </span>
+                    </div>
+
+                    <!-- Frozen warning -->
+                    <div v-if="camp.dashboard_frozen && !camp.stock_updated_after_camp"
+                        class="alert alert-danger border-0 rounded-3 p-2 mb-3 small">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Stock update pending!
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex gap-2 mt-auto">
+                        <!-- Notify button — only for scheduled future camps -->
+                        <button
+                            v-if="camp.status === 'scheduled'"
+                            class="btn btn-sky btn-sm flex-grow-1 rounded-3 fw-bold"
+                            @click="scheduleAndNotify(camp.id)"
+                            :disabled="notifyingCamp === camp.id"
+                        >
+                            <span v-if="notifyingCamp === camp.id">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            </span>
+                            <span v-else>
+                                <i class="fas fa-bullhorn me-1"></i> Notify
+                            </span>
+                        </button>
+
+                        <!-- Update stock button — after camp date -->
+                        <button
+                            v-if="isCampPast(camp) && !camp.stock_updated_after_camp"
+                            class="btn btn-danger btn-sm flex-grow-1 rounded-3 fw-bold"
+                            @click="updateCampStock(camp.id)"
+                        >
+                            <i class="fas fa-boxes me-1"></i> Update Stock
+                        </button>
+
+                        <!-- Completed badge -->
+                        <span v-if="camp.stock_updated_after_camp"
+                            class="badge bg-success rounded-3 p-2 flex-grow-1 text-center">
+                            ✅ Completed
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Create Camp Modal -->
+<div v-if="showCreateCamp" class="modal-overlay" @click.self="showCreateCamp = false">
+    <div class="bg-white rounded-4 shadow-lg p-4" style="max-width:550px;width:100%;max-height:90vh;overflow-y:auto">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0">Schedule Donation Camp</h5>
+            <button class="btn btn-light rounded-circle" @click="showCreateCamp = false">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="small fw-bold text-muted">Camp Title *</label>
+                <input type="text" class="form-control border-light-blue"
+                    v-model="campForm.title"
+                    placeholder="e.g. Mega Blood Drive 2026">
+            </div>
+
+            <div class="col-12">
+                <label class="small fw-bold text-muted">Description</label>
+                <textarea class="form-control border-light-blue" rows="2"
+                    v-model="campForm.description"
+                    placeholder="Brief description of the camp"></textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="small fw-bold text-muted">Location / Venue *</label>
+                <input type="text" class="form-control border-light-blue"
+                    v-model="campForm.location"
+                    placeholder="Full address of camp venue">
+            </div>
+
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted">Date *</label>
+                <input type="date" class="form-control border-light-blue"
+                    v-model="campForm.camp_date"
+                    :min="today">
+            </div>
+
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted">Start Time *</label>
+                <input type="time" class="form-control border-light-blue"
+                    v-model="campForm.start_time">
+            </div>
+
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted">End Time *</label>
+                <input type="time" class="form-control border-light-blue"
+                    v-model="campForm.end_time">
+            </div>
+
+            <div class="col-md-6">
+                <label class="small fw-bold text-muted">Expected Donors</label>
+                <input type="number" class="form-control border-light-blue"
+                    v-model.number="campForm.expected_donors"
+                    placeholder="0" min="0">
+            </div>
+
+            <div class="col-12">
+                <label class="small fw-bold text-muted">Blood Groups Needed</label>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    <button
+                        v-for="bg in allBloodGroups"
+                        :key="bg"
+                        type="button"
+                        :class="['btn btn-sm rounded-pill fw-bold',
+                            campForm.blood_groups_needed.includes(bg)
+                            ? 'btn-sky' : 'btn-sky-outline']"
+                        @click="toggleBloodGroup(bg)"
+                    >
+                        {{ bg }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div v-if="campError" class="alert alert-danger border-0 rounded-4 mt-3">
+            {{ campError }}
+        </div>
+
+        <!-- Success -->
+        <div v-if="campSuccess" class="alert alert-success border-0 rounded-4 mt-3">
+            {{ campSuccess }}
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button
+                class="btn btn-sky fw-bold flex-grow-1 py-3 rounded-3"
+                @click="createCamp"
+                :disabled="creatingCamp"
+            >
+                <span v-if="creatingCamp">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Creating...
+                </span>
+                <span v-else>
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Create Camp
+                </span>
+            </button>
+            <button class="btn btn-light flex-grow-1 py-3 rounded-3"
+                @click="showCreateCamp = false">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
 
         <!-- ══════════════════════════════════ -->
         <!-- PROFILE                            -->
@@ -552,7 +852,37 @@ export default {
       attenderLoading: false,
       fulfillingRequest: false,
 
+      // Camp management
+
+      camps: [],
+campsLoading: false,
+showCreateCamp: false,
+creatingCamp: false,
+notifyingCamp: null,
+campError: null,
+campSuccess: null,
+isDashboardFrozen: false,
+frozenCamp: null,
+
+campForm: {
+    title: '',
+    description: '',
+    location: '',
+    camp_date: '',
+    start_time: '',
+    end_time: '',
+    expected_donors: 0,
+    blood_groups_needed: []
+},
+
+allBloodGroups: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
+
+today: new Date().toISOString().split('T')[0],
+
+
+
       // Verify donation
+      selectedRequest: null,
       otpCode: '',
       otpResult: null,
       otpLoading: false,
@@ -647,6 +977,9 @@ export default {
         await this.fetchActiveDonorRequests()
         await this.fetchAttenderRequests()
         await this.fetchRecentDonations()
+        await this.fetchCamps()
+        await this.checkDashboardFreeze()
+
       } catch (err) {
         if (err.response?.status === 401) {
           localStorage.removeItem('access_token')
@@ -764,6 +1097,11 @@ export default {
         this.attenderLoading = false
       }
     },
+    copyRef(id) {
+    navigator.clipboard.writeText(id);
+    // You can use a toast or simple alert
+    alert("Reference Key copied to clipboard!");
+  },
 
     async searchByRefId() {
       if (!this.searchRefId) return
@@ -950,9 +1288,133 @@ export default {
         this.$router.push('/')
         return
       }
+
+
+      if (this.isDashboardFrozen &&
+        !['overview', 'stock', 'camps'].includes(id)) {
+        alert(' Dashboard frozen! Please update stock from your recent camp first.')
+        return
+    }
+
       this.activeTab = id
       this.isMobileMenuOpen = false
+    },
+
+    // ── CAMP MANAGEMENT METHODS
+
+    // ── Toggle blood group selection ─────────
+toggleBloodGroup(bg) {
+    const idx = this.campForm.blood_groups_needed.indexOf(bg)
+    if (idx === -1) {
+        this.campForm.blood_groups_needed.push(bg)
+    } else {
+        this.campForm.blood_groups_needed.splice(idx, 1)
     }
+},
+
+// ── Create camp ──────────────────────────
+async createCamp() {
+    if (!this.campForm.title || !this.campForm.camp_date ||
+        !this.campForm.start_time || !this.campForm.end_time) {
+        this.campError = 'Please fill all required fields.'
+        return
+    }
+
+    this.creatingCamp = true
+    this.campError = null
+
+    try {
+        await api.post('/api/partners/camps/create/', this.campForm)
+
+        this.campSuccess = 'Camp created! Click Notify to alert nearby donors.'
+
+        // Reset form
+        this.campForm = {
+            title: '', description: '', location: '',
+            camp_date: '', start_time: '', end_time: '',
+            expected_donors: 0, blood_groups_needed: []
+        }
+
+        // Refresh camps
+        await this.fetchCamps()
+
+        setTimeout(() => {
+            this.campSuccess = null
+            this.showCreateCamp = false
+        }, 2000)
+
+    } catch (err) {
+        this.campError = err.response?.data?.error || 'Failed to create camp.'
+    } finally {
+        this.creatingCamp = false
+    }
+},
+
+// ── Fetch camps ──────────────────────────
+async fetchCamps() {
+    this.campsLoading = true
+    try {
+        const response = await api.get('/api/partners/camps/')
+        this.camps = Array.isArray(response.data) ? response.data : []
+    } catch (err) {
+        this.camps = []
+    } finally {
+        this.campsLoading = false
+    }
+},
+
+// ── Schedule & Notify ────────────────────
+async scheduleAndNotify(campId) {
+    this.notifyingCamp = campId
+    try {
+        const response = await api.post(`/api/partners/camps/${campId}/notify/`)
+        alert(`✅ ${response.data.message}`)
+        await this.fetchCamps()
+    } catch (err) {
+        alert('Failed to notify. Please try again.')
+    } finally {
+        this.notifyingCamp = null
+    }
+},
+
+// ── Update stock after camp ──────────────
+async updateCampStock(campId) {
+    try {
+        await api.post(`/api/partners/camps/${campId}/update-stock/`)
+        alert('Stock updated! Dashboard unfrozen ✅')
+        this.isDashboardFrozen = false
+        this.frozenCamp = null
+        await this.fetchCamps()
+    } catch (err) {
+        alert('Failed to update. Please try again.')
+    }
+},
+
+// ── Check camp date passed ───────────────
+isCampPast(camp) {
+    return new Date(camp.camp_date) < new Date()
+},
+
+// ── Check dashboard freeze ───────────────
+async checkDashboardFreeze() {
+    try {
+        const response = await api.get('/api/partners/camps/check-freeze/')
+        this.isDashboardFrozen = response.data.is_frozen
+        if (response.data.is_frozen) {
+            this.frozenCamp = response.data.frozen_camp
+        }
+    } catch (err) {
+        console.error(err)
+    }
+},
+
+// ── Go to stock update ───────────────────
+goToStockUpdate() {
+    this.activeTab = 'stock'
+},
+
+
+
   }
 }
 </script>
@@ -989,4 +1451,33 @@ export default {
 .animate-fade { animation: fadeIn 0.4s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .border-dashed { border: 2px dashed #B3E5FC; }
+
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7); /* Darker backdrop */
+  backdrop-filter: blur(5px);
+  z-index: 2000;
+}
+
+.hover-zoom {
+  transition: transform 0.2s ease;
+  cursor: zoom-in;
+}
+
+.hover-zoom:hover {
+  transform: scale(1.03);
+}
+
+.fw-mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.text-sky-light {
+  color: #a5f3fc;
+}
 </style>
