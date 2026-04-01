@@ -180,15 +180,28 @@ class PartnerDonorRequestListView(APIView):
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
 
+        print("=== REQUEST HIT ===")
+        print("donor_lat:", donor_lat)
+        print("donor_lon:", donor_lon)
+        print("blood_group:", blood_group)
+
         open_requests = PartnerDonorRequest.objects.filter(
-            status='open'
-        ).select_related('partner').order_by('-created_at')
+    status='open'  # ← include assigned
+).select_related('partner').order_by('-created_at')
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
+            print("AFTER BG FILTER:", open_requests.count())
+        print("lat/lon present?", bool(donor_lat and donor_lon))
 
         if donor_lat and donor_lon:
             partners_in_requests = list(set([req.partner for req in open_requests]))
+            print("UNIQUE PARTNERS:", len(partners_in_requests))
+
+            for p in partners_in_requests:
+
+                print(f"Partner: {p.hospital_name} | lat: {p.latitude} | lng: {p.longitude}")
+
 
             nearby_partners = get_nearby_partners(
                 donor_lat, donor_lon,
@@ -221,33 +234,50 @@ class PartnerDonorRequestListView(APIView):
         )
 
 
+from .models import OTPCode
+
 class DonorAcceptRequestView(APIView):
 
     def post(self, request, request_id):
         try:
             payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only donors can accept requests.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
             donor = Donor.objects.get(id=payload['id'])
 
-            # Check if donor account is locked
             if donor.is_locked:
                 return Response(
                     {'error': 'Your account is locked.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            req = PartnerDonorRequest.objects.get(id=request_id, status='open')
+            req = PartnerDonorRequest.objects.get(
+                id=request_id,
+                status='open'
+            )
+
             req.assigned_donor = donor
             req.status = 'assigned'
             req.save()
 
+            # Generate OTP
+            OTPCode.objects.filter(request=req).delete()
+            otp = OTPCode.objects.create(
+                request=req,
+                code=OTPCode.generate_code()
+            )
+
+            # ✅ Create notification for partner
+            from notifications.models import Notification
+            Notification.objects.create(
+                partner=req.partner,
+                notification_type='sms',
+                trigger='donor_accepted',
+                message=f'Donor #{donor.id} has accepted your blood request for {req.blood_group} ({req.quantity} units). OTP: {otp.code}',
+                status='pending'
+            )
+
             return Response({
-                'message': 'Request accepted successfully.',
+                'message': 'Request accepted!',
+                'otp_code': otp.code,
                 'request': PartnerDonorRequestSerializer(req).data
             })
 
@@ -257,9 +287,15 @@ class DonorAcceptRequestView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
 
 class DonorCancelRequestView(APIView):
@@ -313,3 +349,74 @@ class DonorCancelRequestView(APIView):
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+class FulfillAttenderRequestView(APIView):
+
+    def post(self, request, reference_id):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can fulfill requests.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            partner = Partners.objects.get(id=payload['id'])
+
+            req = AttenderRequest.objects.get(
+                reference_id=reference_id,
+                status='pending'
+            )
+
+            req.status = 'fulfilled'
+            req.save()
+
+            return Response({
+                'message': 'Request fulfilled successfully! ✅',
+                'reference_id': str(req.reference_id)
+            })
+
+        except AttenderRequest.DoesNotExist:
+            return Response(
+                {'error': 'Request not found or already fulfilled.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class GetRequestOTPView(APIView):
+
+    def get(self, request, request_id):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can view OTP.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            from .models import OTPCode
+            otp = OTPCode.objects.get(
+                request_id=request_id,
+                is_used=False
+            )
+            return Response({'otp_code': otp.code})
+
+        except OTPCode.DoesNotExist:
+            return Response(
+                {'otp_code': None},
+                status=status.HTTP_200_OK
+            )
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except jwt.InvalidTokenError:
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )

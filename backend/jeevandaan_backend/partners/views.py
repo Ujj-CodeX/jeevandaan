@@ -194,7 +194,24 @@ class PartnerLoginView(APIView):
             'partner': PartnerProfileSerializer(partner).data
         })
     
+    
+        
+class PartnerPublicListView(APIView):
+    permission_classes = [AllowAny]
 
+    def get(self, request):
+        city = request.query_params.get('city')
+        partner_type = request.query_params.get('type')
+
+        partners = Partners.objects.filter(is_live=True , is_verified=True)
+        if city:
+            partners = partners.filter(city=city)
+        if partner_type:
+            partners = partners.filter(type=partner_type)
+        serializer = PartnerPublicSerializer(partners, many=True)
+
+        return Response(serializer.data)
+    
 class PartnerProfileView(APIView):
     permission_classes = [AllowAny]
 
@@ -225,22 +242,66 @@ class PartnerProfileView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+        try:
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            if payload.get('type') != 'partner':
+                return Response({'error': 'Invalid token type.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            partner = Partners.objects.get(id=payload['id'])
+
+            # Only allow updating these fields
+            allowed_fields = [
+                'hospital_name', 'contact', 'address',
+                'city', 'state', 'facility',
+                'convenience_fee', 'fee_description'
+            ]
+
+            for field in allowed_fields:
+                if field in request.data:
+                    setattr(partner, field, request.data[field])
+
+            partner.save()
+            return Response(PartnerProfileSerializer(partner).data)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Partners.DoesNotExist:
+            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
         
-class PartnerPublicListView(APIView):
+
+
+class UpdatePartnerLocationView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        city = request.query_params.get('city')
-        partner_type = request.query_params.get('type')
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = Partners.objects.get(id=payload['id'])
 
-        partners = Partners.objects.filter(is_live=True , is_verified=True)
-        if city:
-            partners = partners.filter(city=city)
-        if partner_type:
-            partners = partners.filter(type=partner_type)
-        serializer = PartnerPublicSerializer(partners, many=True)
+            lat = request.data.get('latitude')
+            lng = request.data.get('longitude')
 
-        return Response(serializer.data)
-    
-    
-    
+            if not lat or not lng:
+                return Response(
+                    {'error': 'latitude and longitude required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            partner.latitude = lat
+            partner.longitude = lng
+            partner.save()
+
+            return Response({'message': 'Location updated ✅'})
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Partners.DoesNotExist:
+            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)

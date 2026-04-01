@@ -8,6 +8,7 @@ import partnersreg from '@/components/HospitalReg.vue'
 import partnerslogin from '@/components/HospitalLogin.vue'
 import request1 from '@/components/Request1.vue'
 import learn from '@/components/Learn.vue'
+import Chat from '@/components/Chat.vue'
 
 
 
@@ -72,6 +73,13 @@ const routes =[
         component : learn,
         meta: { title: 'JeevanDaan+ | Learn'}
     },
+
+    {
+    path: '/chat/:id',
+    name: 'Chat',
+    component: Chat,
+    meta: { title: 'JeevanDaan+ | Chat'}
+  }
     
     
 

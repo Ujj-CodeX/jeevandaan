@@ -6,7 +6,9 @@ from .views import (
     PartnerDonorRequestCreateView,
     PartnerDonorRequestListView,
     DonorAcceptRequestView,
-    DonorCancelRequestView
+    DonorCancelRequestView,
+    FulfillAttenderRequestView,
+    GetRequestOTPView,
 )
 
 urlpatterns = [
@@ -20,4 +22,6 @@ urlpatterns = [
     path('donor/list/', PartnerDonorRequestListView.as_view()),
     path('donor/<int:request_id>/accept/', DonorAcceptRequestView.as_view()),
     path('donor/<int:request_id>/cancel/', DonorCancelRequestView.as_view()),
+    path('attender/<uuid:reference_id>/fulfill/', FulfillAttenderRequestView.as_view()),
+    path('otp/<int:request_id>/', GetRequestOTPView.as_view()),
 ]

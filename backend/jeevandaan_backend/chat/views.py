@@ -99,20 +99,28 @@ class ChatHistoryView(APIView):
                     {'error': 'Request not found.'},
                     status=status.HTTP_404_NOT_FOUND
                 )
+            # Make sure this check allows both donor and partner
+            if sender_type not in ['donor', 'partner']:
+                return Response(
+                {'error': 'Unauthorized.'},
+                 status=status.HTTP_403_FORBIDDEN
+                  )
+
+# Verify sender belongs to this request
             if sender_type == 'donor':
                 donor = Donor.objects.get(id=payload['id'])
                 if req.assigned_donor != donor:
-                    return Response(
-                        {'error': 'You are not assigned to this request.'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+                  return Response(
+            {'error': 'You are not assigned to this request.'},
+            status=status.HTTP_403_FORBIDDEN
+                               )
             elif sender_type == 'partner':
-                partner = Partners.objects.get(id=payload['id'])
-                if req.partner != partner:
-                    return Response(
-                        {'error': 'This request does not belong to you.'},
+              partner = Partners.objects.get(id=payload['id'])
+              if req.partner != partner:
+                   return Response(
+                    {'error': 'This request does not belong to you.'},
                         status=status.HTTP_403_FORBIDDEN
-                    )
+                   )
             chats = Chat.objects.filter(request=req).order_by('sent_at')
             return Response(ChatSerializer(chats, many=True).data)
         except jwt.ExpiredSignatureError:

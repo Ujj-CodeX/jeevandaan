@@ -3,6 +3,9 @@ import uuid
 from django.db import models
 from sqlalchemy import null
 from users.models import Donor
+import random
+import string
+
 
 class AttenderRequest(models.Model):
     STATUS_CHOICES = [
@@ -74,3 +77,35 @@ class PartnerDonorRequest(models.Model):
 
     def __str__(self):
         return f"{self.partner.hospital_name} needs {self.quantity} units of {self.blood_group} — {self.status}"
+
+
+
+class OTPCode(models.Model):
+
+    # Linked to donor request
+    request = models.OneToOneField(
+        PartnerDonorRequest,
+        on_delete=models.CASCADE,
+        related_name='otp'
+    )
+
+    # The OTP code
+    code = models.CharField(max_length=6, unique=True)
+
+    # Is it used?
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"OTP {self.code} for Request #{self.request.id}"
+
+    @staticmethod
+    def generate_code():
+        """Generate unique 6 digit OTP"""
+        while True:
+            code = ''.join(random.choices(string.digits, k=6))
+            if not OTPCode.objects.filter(code=code).exists():
+                return code

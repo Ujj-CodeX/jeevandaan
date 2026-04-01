@@ -181,3 +181,34 @@ class GoogleAuthView(APIView):
                 'donor': DonorProfileSerializer(donor).data,
                 'is_new_user': True,    # ← Vue.js redirects to complete profile
             }, status=status.HTTP_201_CREATED)
+
+class UpdateDonorLocationView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            donor = Donor.objects.get(id=payload['id'])
+
+            lat = request.data.get('latitude')
+            lng = request.data.get('longitude')
+
+            if not lat or not lng:
+                return Response(
+                    {'error': 'latitude and longitude required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            donor.latitude = lat
+            donor.longitude = lng
+            donor.save()
+
+            return Response({'message': 'Location updated '})
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Donor.DoesNotExist:
+            return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)

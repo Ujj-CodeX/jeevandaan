@@ -384,7 +384,21 @@
           </div>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
+          <!-- Replace this -->
+<button class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2">Accept</button>
+
+<!-- With this -->
+<button
+    class="btn btn-danger btn-sm rounded-pill flex-grow-1 py-2"
+    @click="acceptRequest(req.id)"
+    :disabled="acceptingId === req.id"
+>
+    <span v-if="acceptingId === req.id">
+        <span class="spinner-border spinner-border-sm me-1"></span>
+        Accepting...
+    </span>
+    <span v-else>Accept</span>
+</button>
           <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
         </div>
       </div>
@@ -667,6 +681,114 @@
     </div>
 </div>
 
+<!-- Partner Request Detail Modal -->
+<div v-if="selectedRequest" class="modal-overlay" @click.self="selectedRequest = null">
+    <div class="registration-card shadow-lg" style="max-width:480px">
+        <button class="close-btn" @click="selectedRequest = null">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="card-body p-4">
+            <!-- Header -->
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <img
+                    :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(selectedRequest.hospital_name)}&background=E63946&color=fff`"
+                    class="partner-avatar"
+                    :alt="selectedRequest.hospital_name"
+                    @click="openRequestDetail(selectedRequest)"
+                    style="width:55px;height:55px;border-radius:14px"
+                >
+                <div>
+                    <h5 class="fw-bold mb-0">{{ selectedRequest.hospital_name }}</h5>
+                    <small class="text-muted">
+                        <i class="fa-solid fa-location-dot me-1 text-danger"></i>
+                        {{ selectedRequest.city }}
+                        <span v-if="selectedRequest.distance_km" class="ms-2 text-danger fw-bold">
+                            {{ selectedRequest.distance_km }} km away
+                        </span>
+                    </small>
+                </div>
+            </div>
+
+            <!-- Request details -->
+            <div class="p-3 bg-light rounded-4 mb-4">
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted">Blood Group Needed</small>
+                    <strong class="text-danger">{{ selectedRequest.blood_group }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted">Units Required</small>
+                    <strong>{{ selectedRequest.quantity }} units</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted">Status</small>
+                    <span class="badge bg-warning text-dark rounded-pill">{{ selectedRequest.status }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <small class="text-muted">Posted</small>
+                    <small class="fw-bold">{{ timeAgo(selectedRequest.created_at) }}</small>
+                </div>
+                <div class="d-flex justify-content-between py-2">
+                    <small class="text-muted">Expires</small>
+                    <small :class="['fw-bold', isExpiringSoon(selectedRequest.expires_at) ? 'text-danger' : 'text-success']">
+                        {{ formatDate(selectedRequest.expires_at) }}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Urgency indicator -->
+            <div :class="['p-3 rounded-4 mb-4 text-center', isExpiringSoon(selectedRequest.expires_at) ? 'bg-danger bg-opacity-10' : 'bg-success bg-opacity-10']">
+                <i :class="['me-2', isExpiringSoon(selectedRequest.expires_at) ? 'fas fa-exclamation-triangle text-danger' : 'fas fa-clock text-success']"></i>
+                <small :class="['fw-bold', isExpiringSoon(selectedRequest.expires_at) ? 'text-danger' : 'text-success']">
+                    {{ isExpiringSoon(selectedRequest.expires_at) ? 'URGENT — Expiring soon!' : 'Normal priority' }}
+                </small>
+            </div>
+
+            <!-- OTP info (shown after accept) -->
+            <div v-if="acceptedOTP" class="p-3 bg-danger bg-opacity-10 rounded-4 mb-4 text-center">
+                <p class="fw-bold mb-1 text-danger">Your One-Time Code</p>
+                <h2 class="fw-800 text-danger mb-1 display-5">{{ acceptedOTP }}</h2>
+                <small class="text-muted">Show this code at the blood bank — keep it safe!</small>
+            </div>
+
+            <!-- Buttons -->
+            <div v-if="!acceptedOTP">
+                <button
+                    class="btn btn-danger w-100 py-3 fw-bold rounded-4 shadow mb-2"
+                    @click="acceptRequest(selectedRequest.id)"
+                    :disabled="acceptingId === selectedRequest.id"
+                >
+                    <span v-if="acceptingId === selectedRequest.id">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Accepting...
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-heart me-2"></i>
+                        Accept & Donate
+                    </span>
+                </button>
+                <button class="btn btn-light w-100 py-2 rounded-4" @click="selectedRequest = null">
+                    Cancel
+                </button>
+            </div>
+
+            <!-- After accepted — go to chat -->
+            <div v-else>
+                <button
+                    class="btn btn-danger w-100 py-3 fw-bold rounded-4 shadow mb-2"
+                    @click="goToChat"
+                >
+                    <i class="fas fa-comments me-2"></i>
+                    Open Chat with Bank
+                </button>
+                <button class="btn btn-light w-100 py-2 rounded-4" @click="selectedRequest = null">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 
   </div>
@@ -687,6 +809,10 @@ export default {
       nearbyPartners: [],
 partnersLoading: false,
 selectedPartner: null,
+selectedRequest: null,
+acceptingId: null,
+acceptedOTP: null,
+acceptedRequestId: null,
     }
   },
   mounted() {
@@ -720,7 +846,7 @@ async saveGPSLocation() {
     navigator.geolocation.getCurrentPosition(
         async (pos) => {
             try {
-                await api.put('/api/users/profile/', {
+                await api.post('/api/users/update-location/', {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude
                 })
@@ -783,29 +909,36 @@ getStockLabel(partner) {
     },
 
     async fetchPartnerRequests() {
-    const coords = await this.getCoordinates()
-    const lat = coords?.lat || ''
-    const lng = coords?.lon || ''
-    const bg = this.donor.blood_group || ''
+    this.requestsLoading = true
 
-    // Backend filters by blood group
-    // Frontend can additionally filter by distance
-    const response = await api.get(
-        `/api/requests/donor/list/?blood_group=${bg}`
-    )
+    try {
+        // 1. Get coordinates once
+        const coords = await this.getCoordinates()
 
-    // Filter by distance on frontend
-    if (lat && lng && response.data.length > 0) {
-        this.partnerRequests = response.data.filter(req => {
-            if (!req.latitude || !req.longitude) return true
-            const distance = this.calculateDistance(
-                lat, lng,
-                req.latitude, req.longitude
-            )
-            return distance <= 20  // ← 20km radius
-        })
-    } else {
-        this.partnerRequests = response.data
+        if (!coords) {
+            console.warn("GPS not available")
+        }
+
+        const lat = coords?.lat || ''
+        const lng = coords?.lon || ''
+        const bg = encodeURIComponent(this.donor?.blood_group || '')
+
+        // 2. Call API (backend already handles distance filtering)
+        const url = `/api/requests/donor/list/?blood_group=${bg}&lat=${lat}&lon=${lng}`
+          console.log('CALLING URL:', url)    // ← add this
+
+        const response = await api.get(url)
+          console.log('RESPONSE:', response.data)
+
+        // 3. Direct assign (NO frontend filtering)
+        this.partnerRequests = Array.isArray(response.data) ? response.data : []
+
+    } catch (err) {
+        console.error("Failed to fetch partner requests:", err)
+        this.partnerRequests = []
+    } finally {
+        // 4. ALWAYS stop loading
+        this.requestsLoading = false
     }
 },
 
@@ -836,6 +969,58 @@ getCoordinates() {
       () => resolve(null)  
     )
   })
+},
+
+    // ── Open request detail modal ────────────
+openRequestDetail(req) {
+    this.selectedRequest = req
+    this.acceptedOTP = null
+    this.acceptedRequestId = null
+},
+
+// ── Accept request ────────────────────────
+async acceptRequest(requestId) {
+    this.acceptingId = requestId
+
+    try {
+
+      const selected = this.partnerRequests.find(r => r.id === requestId)
+        const response = await api.post(
+            `/api/requests/donor/${requestId}/accept/`
+        )
+
+
+
+        // Store OTP — show to donor ONCE
+        this.acceptedOTP = response.data.otp_code
+        this.acceptedRequestId = requestId
+
+        
+
+        
+
+        this.selectedRequest = selected
+
+        // Refresh requests list
+        await this.fetchPartnerRequests()
+
+    } catch (err) {
+        const msg = err.response?.data?.error || 'Failed to accept. Try again.'
+        alert(msg)
+        console.error(err)
+    } finally {
+        this.acceptingId = null
+    }
+},
+
+// ── Go to chat page ───────────────────────
+goToChat() {
+    if (!this.acceptedRequestId) return
+    localStorage.setItem(`otp_${this.acceptedRequestId}`, this.acceptedOTP)
+    this.$router.push({
+        path: `/chat/${this.acceptedRequestId}`,
+        query: { otp: this.acceptedOTP }
+    })
 },
 
     timeAgo(dateStr) {

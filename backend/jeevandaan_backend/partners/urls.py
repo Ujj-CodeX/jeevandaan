@@ -6,6 +6,7 @@ from .views import (
     PartnerPublicListView,
     NearbyPartnersView,      # ← add
     NearbyDonorsView ,
+    UpdatePartnerLocationView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path('list/', PartnerPublicListView.as_view()),
     path('nearby/', NearbyPartnersView.as_view()),           # ← add
     path('nearby-donors/', NearbyDonorsView.as_view()),
+    path('update-location/', UpdatePartnerLocationView.as_view()),
 ]
