@@ -18,14 +18,23 @@
       </div>
 
       <nav class="nav flex-column gap-1 px-3">
-        <button v-for="item in menuItems" :key="item.id" 
-                @click="navigate(item.id)"
-                :class="['nav-link menu-btn', activeTab === item.id ? 'active' : '']">
-          <i :class="[item.icon, 'me-3']"></i> 
-          <span>{{ item.label }}</span>
-          <span v-if="item.id === 'notifications' && unreadNotifs > 0" class="badge rounded-pill bg-danger ms-auto">{{ unreadNotifs }}</span>
-        </button>
-      </nav>
+  <button v-for="item in menuItems" :key="item.id" 
+          @click="navigate(item.id)"
+          
+          :class="[
+            'nav-link menu-btn w-100 text-start d-flex align-items-center', 
+            activeTab === item.id ? 'active' : ''
+
+          ]">
+    
+    <i :class="[item.icon, 'me-3']" style="width: 20px;"></i> 
+    <span class="flex-grow-1">{{ item.label }}</span>
+    <span v-if="item.id === 'notifications' && unreadNotifs > 0" 
+          class="badge rounded-pill bg-danger ms-2">
+      {{ unreadNotifs }}
+    </span>
+  </button>
+</nav>
 
       <div class="mt-auto p-4 border-top">
         <div class="license-status bg-light p-3 rounded-4 d-flex align-items-center">
@@ -73,6 +82,7 @@
       </header>
 
       <div v-if="!loading && !error" class="p-3 p-md-4">
+        
 
         <!-- ══════════════════════════════════ -->
         <!-- OVERVIEW                           -->
@@ -477,6 +487,8 @@
           </div>
         </section>
 
+        
+
         <!-- ══════════════════════════════════ -->
         <!-- NOTIFICATIONS                      -->
         <!-- ══════════════════════════════════ -->
@@ -512,26 +524,8 @@
 <section v-if="activeTab === 'camps'" class="animate-fade">
 
     <!-- Freeze banner -->
-    <div v-if="isDashboardFrozen" class="alert border-0 rounded-4 p-4 mb-4 text-center"
-        style="background: linear-gradient(135deg, #fff5f5, #ffe0e0)">
-        <i class="fas fa-lock text-danger fa-2x mb-2"></i>
-        <h5 class="fw-bold text-danger">Dashboard Frozen ❄️</h5>
-        <p class="text-muted small mb-3">
-            Please update your stock from the recent donation camp
-            <strong>{{ frozenCamp?.title }}</strong> held on
-            <strong>{{ frozenCamp?.camp_date }}</strong>
-            to unlock your dashboard.
-        </p>
-        <button
-            class="btn btn-danger rounded-pill px-5 fw-bold"
-            @click="goToStockUpdate"
-        >
-            <i class="fas fa-boxes me-2"></i>
-            Update Stock Now
-        </button>
-    </div>
 
-    <div :class="isDashboardFrozen ? 'opacity-50 pe-none' : ''">
+  
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="fw-bold mb-0">Donation Camps</h5>
             <button
@@ -588,6 +582,9 @@
                         </span>
                     </div>
 
+                    <!-- Add inside camp card buttons div -->
+
+
                     <!-- Frozen warning -->
                     <div v-if="camp.dashboard_frozen && !camp.stock_updated_after_camp"
                         class="alert alert-danger border-0 rounded-3 p-2 mb-3 small">
@@ -612,6 +609,21 @@
                             </span>
                         </button>
 
+                        <button
+    v-if="isCampToday(camp) || isCampPast(camp)"
+    class="btn btn-success btn-sm rounded-3 fw-bold"
+    @click="downloadEnrollments(camp)"
+    :disabled="downloadingCamp === camp.id"
+    title="Download enrolled donors list"
+>
+    <span v-if="downloadingCamp === camp.id">
+        <span class="spinner-border spinner-border-sm"></span>
+    </span>
+    <span v-else>
+        <i class="fas fa-download me-1"></i> CSV
+    </span>
+</button>
+
                         <!-- Update stock button — after camp date -->
                         <button
                             v-if="isCampPast(camp) && !camp.stock_updated_after_camp"
@@ -630,8 +642,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    
 </section>
+
 
 <!-- Create Camp Modal -->
 <div v-if="showCreateCamp" class="modal-overlay" @click.self="showCreateCamp = false">
@@ -742,6 +755,8 @@
     </div>
 </div>
 
+
+
         <!-- ══════════════════════════════════ -->
         <!-- PROFILE                            -->
         <!-- ══════════════════════════════════ -->
@@ -819,10 +834,20 @@
           </div>
         </section>
 
+
+        
+
       </div>
     </main>
 
-    <div v-if="isMobileMenuOpen" @click="isMobileMenuOpen = false" class="mobile-overlay"></div>
+    <div v-if="isMobileMenuOpen" @click="isMobileMenuOpen = false" class="mobile-overlay">
+
+
+    </div>
+
+  
+
+
   </div>
 </template>
 
@@ -861,7 +886,6 @@ creatingCamp: false,
 notifyingCamp: null,
 campError: null,
 campSuccess: null,
-isDashboardFrozen: false,
 frozenCamp: null,
 
 campForm: {
@@ -874,6 +898,7 @@ campForm: {
     expected_donors: 0,
     blood_groups_needed: []
 },
+downloadingCamp: null,
 
 allBloodGroups: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
 
@@ -970,6 +995,8 @@ today: new Date().toISOString().split('T')[0],
       try {
         const response = await api.get('/api/partners/profile/')
         this.partner = response.data
+
+      
         this.populateProfileForm()
         await this.fetchStock()
         await this.fetchNotifications()
@@ -978,7 +1005,10 @@ today: new Date().toISOString().split('T')[0],
         await this.fetchAttenderRequests()
         await this.fetchRecentDonations()
         await this.fetchCamps()
-        await this.checkDashboardFreeze()
+        
+
+        
+      
 
       } catch (err) {
         if (err.response?.status === 401) {
@@ -1036,6 +1066,8 @@ today: new Date().toISOString().split('T')[0],
       try {
         await api.post('/api/stock/update/', { blood_group: bloodGroup, quantity: this.stock[bloodGroup] })
         this.stockHistory.unshift({ id: Date.now(), blood_group: bloodGroup, quantity: this.stock[bloodGroup], updated_at: new Date().toISOString() })
+
+        await this.fetchProfile();
         this.stockMessage = { type: 'success', text: `${bloodGroup} stock updated to ${this.stock[bloodGroup]} units successfully!` }
         setTimeout(() => { this.stockMessage = null }, 3000)
       } catch (err) {
@@ -1289,16 +1321,15 @@ today: new Date().toISOString().split('T')[0],
         return
       }
 
+       
 
-      if (this.isDashboardFrozen &&
-        !['overview', 'stock', 'camps'].includes(id)) {
-        alert(' Dashboard frozen! Please update stock from your recent camp first.')
-        return
-    }
+
 
       this.activeTab = id
       this.isMobileMenuOpen = false
     },
+
+    
 
     // ── CAMP MANAGEMENT METHODS
 
@@ -1381,7 +1412,7 @@ async scheduleAndNotify(campId) {
 async updateCampStock(campId) {
     try {
         await api.post(`/api/partners/camps/${campId}/update-stock/`)
-        alert('Stock updated! Dashboard unfrozen ✅')
+        alert('Stock updated!')
         this.isDashboardFrozen = false
         this.frozenCamp = null
         await this.fetchCamps()
@@ -1395,18 +1426,55 @@ isCampPast(camp) {
     return new Date(camp.camp_date) < new Date()
 },
 
-// ── Check dashboard freeze ───────────────
-async checkDashboardFreeze() {
+// ── Check if camp is today ───────────────
+isCampToday(camp) {
+    const today = new Date().toISOString().split('T')[0]
+    return camp.camp_date === today
+},
+
+// ── Download CSV ─────────────────────────
+async downloadEnrollments(camp) {
+    this.downloadingCamp = camp.id
+
     try {
-        const response = await api.get('/api/partners/camps/check-freeze/')
-        this.isDashboardFrozen = response.data.is_frozen
-        if (response.data.is_frozen) {
-            this.frozenCamp = response.data.frozen_camp
+        const token = localStorage.getItem('access_token')
+
+        const response = await fetch(
+            `http://localhost:8000/api/partners/camps/${camp.id}/download/`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        )
+
+        if (!response.ok) {
+            const err = await response.json()
+            alert(err.error || 'Download failed.')
+            return
         }
+
+        // Create download link
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `JeevanDaan_${camp.title}_${camp.camp_date}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
     } catch (err) {
+        alert('Download failed. Please try again.')
         console.error(err)
+    } finally {
+        this.downloadingCamp = null
     }
 },
+
+
+
 
 // ── Go to stock update ───────────────────
 goToStockUpdate() {
@@ -1479,5 +1547,19 @@ goToStockUpdate() {
 
 .text-sky-light {
   color: #a5f3fc;
+}
+
+/* Frozen state for Sidebar Buttons */
+.menu-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none; /* Isse click bilkul block ho jayega */
+  filter: grayscale(0.8);
+}
+
+/* Sidebar mein lock icon ke liye thodi styling */
+.fa-lock {
+  font-size: 0.75rem;
+  color: #dc3545; /* Red color for lock */
 }
 </style>

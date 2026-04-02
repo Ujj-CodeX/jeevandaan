@@ -187,8 +187,8 @@
             <li class="nav-item"><a class="nav-link" href="#" @click.prevent="logout">Logout</a></li>
           </ul>
           <div class="d-flex align-items-center gap-4">
-            <a href="#" class="nav-icon"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></a>
-            <a href="#" class="nav-icon"><i class="fa-regular fa-circle-user"></i></a>
+            
+            <RouterLink to="/profile" class="nav-icon"><i class="fa-regular fa-circle-user"></i></RouterLink>
           </div>
         </div>
       </div>
@@ -247,12 +247,12 @@
             <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
             <h6 class="text-muted small mb-1">Lives Impacted</h6>
             <!-- Each donation saves ~3 lives -->
-            <p class="fw-bold mb-0">{{ donor.total_donations * 3 }} People</p>
+            <p class="fw-bold mb-0">{{ donor.total_donations }} People</p>
           </div>
         </div>
         <div class="col-6 col-lg-3">
           <div class="jd-card stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-shield-check"></i></div>
+            <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
             <h6 class="text-muted small mb-1">Reliability</h6>
             <p class="fw-bold mb-0 text-success">{{ donor.reliability_score }} Score</p>
           </div>
@@ -404,7 +404,48 @@
 </div>
 
 
-          <!-- Calendar — HARDCODED (kept as is) -->
+          <!-- Enrolled camps-->
+
+          <div class="mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-800 mb-0"><i class="fas fa-bookmark text-danger me-2"></i>My Enrolled Camps</h4>
+    <span class="badge bg-danger-soft text-danger rounded-pill px-3">{{ enrolledCamps.length }} Enrolled</span>
+  </div>
+
+  <div v-if="enrolledLoading" class="text-center py-5">
+    <div class="spinner-border text-danger"></div>
+  </div>
+
+  <div v-else-if="enrolledCamps.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center bg-light">
+    <i class="fas fa-calendar-times text-muted fa-3x mb-3"></i>
+    <h6 class="fw-bold">No Enrollments Found</h6>
+    <p class="text-muted small">Camps you register for will appear here.</p>
+  </div>
+
+  <div v-else class="row g-3">
+    <div class="col-md-6 col-lg-4" v-for="camp in enrolledCamps" :key="camp.id">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100 border-start border-danger border-4">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="badge bg-success-soft text-success smallest rounded-pill">Confirmed</span>
+            <small class="text-muted"><i class="far fa-clock me-1"></i>{{ formatDate(camp.camp_date) }}</small>
+          </div>
+          <h6 class="fw-bold mb-2">{{ camp.title }}</h6>
+          <p class="smallest text-muted mb-3"><i class="fas fa-map-marker-alt me-1 text-danger"></i>{{ camp.location }}</p>
+          
+          <div class="d-flex align-items-center justify-content-between mt-auto pt-3 border-top">
+            <a :href="'https://maps.google.com/?q=' + camp.location" target="_blank" class="btn btn-link btn-sm text-sky p-0 text-decoration-none">
+              <i class="fas fa-directions me-1"></i> Get Directions
+            </a>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
           
 
 
@@ -461,12 +502,17 @@
 <!-- Enroll Modal -->
 <div v-if="showEnrollModal" class="modal-overlay" @click.self="showEnrollModal = false">
     <div class="registration-card shadow-lg" style="max-width:450px">
+
         <button class="close-btn" @click="showEnrollModal = false">
             <i class="fas fa-times"></i>
         </button>
         <div class="card-body p-4">
             <h5 class="fw-bold mb-1">Enroll in Camp</h5>
             <p class="text-muted small mb-4">{{ selectedCamp?.title }}</p>
+            <h6 class="text-danger fw-bold small mb-4">
+    <i class="fas fa-exclamation-triangle me-1"></i> 
+    Note: Cancellation is not allowed after the request is accepted.
+</h6>
 
             <div class="mb-3">
                 <label class="small fw-bold text-muted">Your Name</label>
@@ -544,17 +590,36 @@
 
           
           <div class="jd-card p-4 text-center">
-            <h5 class="fw-bold mb-3">Eligibility Status</h5>
-            <div class="eligibility-check shadow-sm">
-              <i class="fa-solid fa-check"></i>
-            </div>
-            <p class="fw-bold mb-1">Ready to Donate!</p>
-            <p class="small text-muted mb-3">
-              Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
-              Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✅' : '❌' }}</strong>
-            </p>
-            
-          </div>
+  <h5 class="fw-bold mb-3">Eligibility Status</h5>
+
+  <div :class="[
+    'eligibility-check shadow-sm mb-3', 
+    donor.is_aadhaar_verified ? 'bg-success text-white' : 'bg-danger text-white'
+  ]">
+  
+    <i :class="donor.is_aadhaar_verified ? 'fa-solid fa-check' : 'fa-solid fa-xmark'"></i>
+  </div>
+  
+
+  <p :class="['fw-bold mb-1', donor.is_aadhaar_verified ? 'text-success' : 'text-danger']">
+    {{ donor.is_aadhaar_verified ? 'Ready to Donate!' : 'Verification Pending' }}
+  </p>
+
+  <div class="alert alert-light border-0 small text-muted mb-0">
+    <i class="fa-solid fa-info-circle me-1 text-primary"></i>
+    Quick Tip: Ensure you are feeling healthy and have maintained a 
+    safe gap since your last donation.
+  </div>
+  <p class="small text-muted mb-3">
+    Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
+    Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✅' : '❌' }}</strong>
+  </p>
+
+  <div v-if="!donor.is_aadhaar_verified" class="alert alert-danger py-2 px-3 small border-0 mb-0">
+    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+    Please verify your Aadhaar to participate in camps.
+  </div>
+</div>
 
           <!-- Achievements — HARDCODED (kept as is) -->
           <div class="jd-card p-4">
@@ -704,13 +769,13 @@
                 <p class="fw-bold small mb-2">Blood Stock Status:</p>
                 <div class="d-flex flex-wrap gap-2">
                     <span
-                        v-for="(qty, group) in selectedPartner.stock_summary"
+                        v-for="(qty, group) in selectedPartner.available_units"
                         :key="group"
                         :class="['badge rounded-pill px-3 py-2', qty > 5 ? 'bg-success' : qty > 0 ? 'bg-warning text-dark' : 'bg-danger']"
                     >
                         {{ group }}: {{ qty }} units
                     </span>
-                    <span v-if="!selectedPartner.stock_summary" class="text-muted small">
+                    <span v-if="!selectedPartner.available_units" class="text-muted small">
                         Stock info not available
                     </span>
                 </div>
@@ -866,7 +931,11 @@ selectedCamp: null,
 enrollForm: {
     name: '',
     phone: '',
-    blood_group: ''
+    blood_group: '',
+
+    user: {},
+    enrolledCamps: [],
+    enrolledLoading: false,
 },
 enrolling: false,
     }
@@ -874,19 +943,21 @@ enrolling: false,
   mounted() {
   this.fetchProfile()
   this.saveGPSLocation()
+  this.fetchEnrolledCamps()
 },
 
   methods: {
     async fetchNearbyPartners() {
     this.partnersLoading = true
     try {
-        const coords = await this.getCoordinates()
+        const coords = await this.getCoordinates() 
         const lat = coords?.lat || ''
         const lng = coords?.lon || ''
 
         const url = `http://localhost:8000/api/partners/nearby/?lat=${lat}&lng=${lng}&radius=20`
         const response = await fetch(url)
         const data = await response.json()
+        console.log('Nearby partners data:', data)
         this.nearbyPartners = Array.isArray(data) ? data : []
     } catch (err) {
         this.nearbyPartners = []
@@ -1148,6 +1219,42 @@ async enrollInCamp() {
         this.enrolling = false
     }
 },
+
+
+// ... enrolled camps ...
+
+  async fetchEnrolledCamps() {
+  this.enrolledLoading = true;
+  try {
+    const res = await api.get('/api/partners/camps/enrolled/');
+    
+    this.enrolledCamps = res.data || []; 
+  } catch (err) {
+    this.enrolledCamps = []; // Reset to empty array on error
+    console.error(err);
+  } finally {
+    this.enrolledLoading = false;
+  }
+},
+
+  async cancelEnrollment(campId) {
+    if (!confirm("Are you sure you want to cancel your enrollment for this camp?")) return;
+    
+    try {
+      await api.post(`/api/camps/${campId}/cancel/`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Enrollment cancelled successfully.");
+      // Refresh both lists
+      this.fetchEnrolledCamps();
+      if (this.fetchAvailableCamps) this.fetchAvailableCamps(); 
+    } catch (err) {
+      alert("Failed to cancel enrollment.");
+    }
+  },
+
+  
+
   },
 
   }

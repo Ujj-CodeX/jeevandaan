@@ -10,6 +10,7 @@ import request1 from '@/components/Request1.vue'
 import learn from '@/components/Learn.vue'
 import Chat from '@/components/Chat.vue'
 import RequestSuccess from '@/components/RequestSuccess.vue'
+import Profile from '@/components/Profile.vue'
 
 
 
@@ -85,6 +86,7 @@ const routes =[
         name: 'RequestSuccess',
         component: RequestSuccess
     },
+    { path: '/profile', name: 'Profile', component: Profile, meta: { title: 'JeevanDaan+ | Profile'} }
     
     
 

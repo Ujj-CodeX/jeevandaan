@@ -69,31 +69,9 @@ def start():
         replace_existing=True
     )
 
-    scheduler.add_job(
-    freeze_camp_dashboards,
-    'interval',
-    hours=1,
-    id='freeze_camp_dashboards',
-    replace_existing=True
-)
+    
 
     scheduler.start()
     print("Scheduler started")
 
-def freeze_camp_dashboards():
-    from partners.models import DonationCamp
-    from datetime import date
-
-    # Find camps that passed without stock update
-    overdue = DonationCamp.objects.filter(
-        camp_date__lt=date.today(),
-        stock_updated_after_camp=False,
-        status='scheduled'
-    )
-
-    count = overdue.count()
-    overdue.update(dashboard_frozen=True)
-
-    if count > 0:
-        print(f"{count} partner dashboards frozen due to pending stock update!")
 

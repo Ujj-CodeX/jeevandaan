@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Partners
 import bcrypt
 from .models import DonationCamp, CampEnrollment
+from stock.models import Stock
 
 class PartnerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -44,18 +45,25 @@ class PartnerProfileSerializer(serializers.ModelSerializer):
 
 
 class PartnerPublicSerializer(serializers.ModelSerializer):
+    available_units = serializers.SerializerMethodField()
+
     class Meta:
         model = Partners
         fields = [
-            'id', 'hospital_name', 'partner_type',
-            'address', 'city', 'state',
-            'contact', 'facility',
-            'convenience_fee', 'fee_description',
-            'latitude', 'longitude',
-            'is_verified', 'is_live'
+            'id', 'hospital_name', 'partner_type', 'address', 'city', 
+            'state', 'contact', 'facility', 'convenience_fee', 
+            'fee_description', 'latitude', 'longitude', 
+            'is_verified', 'is_live', 'available_units'
         ]
 
-
+    # YE FUNCTION HONA COMPULSORY HAI
+    def get_available_units(self, obj):
+        try:
+            # obj yahan Partner instance hai
+            stocks = Stock.objects.filter(partner=obj)
+            return {s.blood_group: s.quantity for s in stocks}
+        except:
+            return {}
 
 class DonationCampSerializer(serializers.ModelSerializer):
     organizer_name = serializers.CharField(

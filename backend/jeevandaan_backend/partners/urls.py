@@ -1,5 +1,7 @@
 from django.urls import path
+from .views import DownloadCampEnrollmentsView   # ← add
 from .views import (
+    EnrolledCampsListView,
     PartnerRegisterView,
     PartnerLoginView,
     PartnerProfileView,
@@ -13,7 +15,7 @@ from .views import (
     NearbyCampsView,             # ← new
     EnrollCampView,              # ← new
     UpdateStockAfterCampView,    # ← new
-    CheckDashboardFreezeView, 
+    
 )
 
 urlpatterns = [
@@ -31,5 +33,10 @@ urlpatterns = [
     path('camps/<int:camp_id>/notify/', ScheduleAndNotifyCampView.as_view()),
     path('camps/<int:camp_id>/enroll/', EnrollCampView.as_view()),
     path('camps/<int:camp_id>/update-stock/', UpdateStockAfterCampView.as_view()),
-    path('camps/check-freeze/', CheckDashboardFreezeView.as_view()),
+    path('camps/enrolled/', EnrolledCampsListView.as_view(), name='enrolled-camps'),
+    
+
+
+    path('camps/<int:camp_id>/download/', DownloadCampEnrollmentsView.as_view()),
+
 ]

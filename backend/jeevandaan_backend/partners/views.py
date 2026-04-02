@@ -79,11 +79,12 @@ class NearbyPartnersView(APIView):
             partner_data['distance_km'] = item['distance_km']
 
             if blood_group:
-                stock = Stock.objects.filter(
-                    partner=item['partner'],
-                    blood_group=blood_group
-                ).first()
-                partner_data['available_units'] = stock.quantity if stock else 0
+                Stock.objects.filter(partner=item['partner'])
+                stock_dict = {s.blood_group: s.quantity for s in Stock}
+    
+                # Always assign it, even if empty {}
+                partner_data['available_units'] = stock_dict if stock_dict else None
+                
 
             result.append(partner_data)
 
@@ -514,6 +515,50 @@ class EnrollCampView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+
+# ── Fetch Enrolled Camps for a specific Donor ──────────
+class EnrolledCampsListView(APIView):
+    """
+    Returns a list of all camps the currently logged-in donor 
+    has enrolled in.
+    """
+    def get(self, request):
+        try:
+            # 1. Decode token to get Donor ID
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            # 2. Security Check: Ensure the token belongs to a donor
+            if payload.get('type') != 'donor':
+                return Response(
+                    {'error': 'Unauthorized. Donor access required.'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            donor_id = payload.get('id')
+
+            # 3. Fetch enrollments for this donor
+            # We select_related('camp') to optimize the database query
+            enrollments = CampEnrollment.objects.filter(donor_id=donor_id).select_related('camp')
+
+            # 4. Serialize the Camp data through the enrollment
+            result = []
+            for entry in enrollments:
+                camp_data = DonationCampSerializer(entry.camp).data
+                # Add enrollment-specific info (like date joined)
+                camp_data['enrolled_at'] = entry.enrolled_at 
+                result.append(camp_data)
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ── Update stock after camp ───────────────────────────
 class UpdateStockAfterCampView(APIView):
 
@@ -533,14 +578,13 @@ class UpdateStockAfterCampView(APIView):
                 organizer__id=payload['id']
             )
 
-            # Mark stock updated → unfreeze dashboard
+            
             camp.stock_updated_after_camp = True
-            camp.dashboard_frozen = False
             camp.status = 'completed'
             camp.save()
 
             return Response({
-                'message': 'Stock updated! Dashboard unfrozen ✅',
+                'message': 'Stock updated! ',
                 'camp': DonationCampSerializer(camp).data
             })
 
@@ -552,36 +596,69 @@ class UpdateStockAfterCampView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-# ── Check dashboard freeze status ────────────────────
-class CheckDashboardFreezeView(APIView):
 
-    def get(self, request):
+
+import csv
+from django.http import HttpResponse
+
+class DownloadCampEnrollmentsView(APIView):
+
+    def get(self, request, camp_id):
         try:
             token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
             payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            partner = Partners.objects.get(id=payload['id'])
 
-            # Check if any past camp without stock update
-            frozen_camp = DonationCamp.objects.filter(
-                organizer=partner,
-                camp_date__lt=date.today(),
-                stock_updated_after_camp=False,
-                status='scheduled'
-            ).first()
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can download.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-            if frozen_camp:
-                # Auto freeze
-                frozen_camp.dashboard_frozen = True
-                frozen_camp.save()
+            camp = DonationCamp.objects.get(
+                id=camp_id,
+                organizer__id=payload['id']
+            )
 
-                return Response({
-                    'is_frozen': True,
-                    'frozen_camp': DonationCampSerializer(frozen_camp).data,
-                    'message': 'Please update stock from your recent donation camp to unlock dashboard.'
-                })
+            # Only allow download on camp date or after
+            from datetime import date
+            if camp.camp_date > date.today():
+                return Response(
+                    {'error': 'Download available only on or after camp date.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-            return Response({'is_frozen': False})
+            enrollments = CampEnrollment.objects.filter(camp=camp)
 
+            # Create CSV response
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="JeevanDaan_{camp.title}_{camp.camp_date}.csv"'
+
+            writer = csv.writer(response)
+
+            # Header row
+            writer.writerow([
+                'S.No', 'Name', 'Phone',
+                'Blood Group', 'Enrolled At', 'Attended'
+            ])
+
+            # Data rows
+            for i, enrollment in enumerate(enrollments, 1):
+                writer.writerow([
+                    i,
+                    enrollment.name,
+                    enrollment.phone,
+                    enrollment.blood_group,
+                    enrollment.enrolled_at.strftime('%d %b %Y %I:%M %p'),
+                    'Yes' if enrollment.attended else 'No'
+                ])
+
+            return response
+
+        except DonationCamp.DoesNotExist:
+            return Response(
+                {'error': 'Camp not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
