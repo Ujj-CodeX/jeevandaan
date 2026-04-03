@@ -79,9 +79,9 @@ class NearbyPartnersView(APIView):
             partner_data['distance_km'] = item['distance_km']
 
             if blood_group:
-                Stock.objects.filter(partner=item['partner'])
-                stock_dict = {s.blood_group: s.quantity for s in Stock}
-    
+                stocks = Stock.objects.filter(partner=item['partner'])
+                stock_dict = {s.blood_group: s.quantity for s in stocks}
+
                 # Always assign it, even if empty {}
                 partner_data['available_units'] = stock_dict if stock_dict else None
                 

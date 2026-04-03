@@ -32,7 +32,7 @@
         <router-link to="/learn" class="nav-link fw-semibold">Learn More</router-link>
 <a href="javascript:void(0)" @click="showRaiseModal = true" class="nav-link fw-semibold">Raise a Request</a>
 <router-link to="/partnersreg" class="nav-link fw-semibold">Join as Partner</router-link>
-<router-link to="/admin" class="nav-link fw-semibold">Admin</router-link>
+<router-link to="/partners_login" class="nav-link fw-semibold">Partners Login</router-link>
       </ul>
       
       <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">

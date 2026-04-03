@@ -21,10 +21,21 @@ class SendMessageView(APIView):
     def post(self,request,request_id):
         try:
             payload =  decode_token(request)
-            sender_type = payload.get('type')
+            
+            user_id = payload.get('id')
 
-            if sender_type not in ['partner', 'donor']:
-                return Response({'error': 'Invalid sender type.'}, status=status.HTTP_403_FORBIDDEN)
+            if Partners.objects.filter(id=user_id).exists():
+              sender_type = 'partner'
+            elif Donor.objects.filter(id=user_id).exists():
+              sender_type = 'donor'
+            else:
+                return Response({'error': 'Invalid user'}, status=status.HTTP_403_FORBIDDEN)
+            print("==== DEBUG SEND ====")
+            print("AUTH HEADER:", request.headers.get('Authorization'))
+            print("PAYLOAD:", payload)
+            print("SENDER TYPE:", sender_type)
+
+            
             
             try:
                 req = PartnerDonorRequest.objects.get(id=request_id)
@@ -59,7 +70,13 @@ class SendMessageView(APIView):
                 'reached',
                 'unable_to_come',
                 'delayed',
-                'donated'
+                'donated',
+                'waiting_for_donor',
+                'donor_arrived',
+                'please_hurry',
+                'donation_received',
+                'request_cancelled'
+
             ]
             if message not in valid_messages:
                 return Response(

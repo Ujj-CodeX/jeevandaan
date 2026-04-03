@@ -508,7 +508,7 @@
               <div :class="['notif-icon', getNotifBg(n.trigger)]"><i :class="getNotifIcon(n.trigger)"></i></div>
               <div class="flex-grow-1">
                 <p class="mb-0 fw-bold small text-dark">{{ getNotifTitle(n.trigger) }}</p>
-                <p class="mb-0 smallest text-muted">{{ n.message }}</p>
+                <p class="mb-0 smallest text-muted"> {{ removeOTP(n.message) }}</p>
                 <small class="smallest opacity-50">{{ timeAgo(n.created_at) }}</small>
               </div>
               <div v-if="n.status === 'pending'" class="mt-1"><span class="badge bg-danger rounded-pill smallest">New</span></div>
@@ -983,7 +983,7 @@ today: new Date().toISOString().split('T')[0],
       const token = localStorage.getItem('access_token')
       const userType = localStorage.getItem('user_type')
       if (!token || userType !== 'partner') {
-        this.$router.push('/partners/login')
+        this.$router.push('/partners_login')
         return
       }
       this.fetchProfile()
@@ -1013,7 +1013,7 @@ today: new Date().toISOString().split('T')[0],
       } catch (err) {
         if (err.response?.status === 401) {
           localStorage.removeItem('access_token')
-          this.$router.push('/partners/login')
+          this.$router.push('/partners_login')
         } else {
           this.error = 'Could not load your profile. Please try again.'
         }
@@ -1098,20 +1098,21 @@ today: new Date().toISOString().split('T')[0],
 
     // ── KEY FIX: safe partner ID comparison handles both int and object formats
     async fetchActiveDonorRequests() {
-      try {
-        const response = await api.get('/api/requests/donor/list/')
+  try {
+    const response = await api.get('/api/requests/donor/detail/')
 
-        // DEBUG: remove this log once confirmed working
-        console.log('partner field sample:', response.data[0]?.partner, '| my id:', this.partner.id)
+    console.log("FULL RESPONSE:", response.data)
 
-        this.activeDonorRequests = response.data.filter(r => {
-          const partnerId = r.partner?.id ?? r.partner   // handles {id:5} OR plain 5
-          return partnerId === this.partner.id && ['open', 'assigned'].includes(r.status)
-        })
-      } catch (err) {
-        console.error('fetchActiveDonorRequests failed:', err)
-      }
-    },
+    // If backend is correct → no need to filter by partner again
+    this.activeDonorRequests = (response.data || []).filter(r =>
+      ['open', 'assigned'].includes(r.status)
+    )
+
+  } catch (err) {
+    console.error('fetchActiveDonorRequests failed:', err)
+    this.activeDonorRequests = []
+  }
+},
 
     // ── Navigate to Chat.vue — works for both partner and donor since Chat.vue reads user_type from localStorage
     openChat(requestId) {
@@ -1430,6 +1431,13 @@ isCampPast(camp) {
 isCampToday(camp) {
     const today = new Date().toISOString().split('T')[0]
     return camp.camp_date === today
+},
+
+removeOTP(text) {
+  if (!text) return ''
+
+  // remove OTP patterns like "OTP: 123456" or "OTP 123456"
+  return text.replace(/otp[:\s]*\d+/gi, '').trim()
 },
 
 // ── Download CSV ─────────────────────────

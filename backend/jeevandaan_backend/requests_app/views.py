@@ -232,6 +232,70 @@ class PartnerDonorRequestListView(APIView):
         return Response(
             PartnerDonorRequestPublicSerializer(open_requests, many=True).data
         )
+    
+class PartnerDonorRequestListDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    DEFAULT_RADIUS_KM = 10      
+    FALLBACK_RADIUS_KM = 50    
+
+    def get(self, request):
+        donor_lat   = request.query_params.get('lat')
+        donor_lon   = request.query_params.get('lon')
+        blood_group = request.query_params.get('blood_group')
+
+        print("=== REQUEST HIT ===")
+        print("donor_lat:", donor_lat)
+        print("donor_lon:", donor_lon)
+        print("blood_group:", blood_group)
+
+        open_requests = PartnerDonorRequest.objects.filter(
+        status__in=['open', 'assigned']  # ← include assigned
+).select_related('partner').order_by('-created_at')
+
+        if blood_group:
+            open_requests = open_requests.filter(blood_group=blood_group)
+            print("AFTER BG FILTER:", open_requests.count())
+        print("lat/lon present?", bool(donor_lat and donor_lon))
+
+        if donor_lat and donor_lon:
+            partners_in_requests = list(set([req.partner for req in open_requests]))
+            print("UNIQUE PARTNERS:", len(partners_in_requests))
+
+            for p in partners_in_requests:
+
+                print(f"Partner: {p.hospital_name} | lat: {p.latitude} | lng: {p.longitude}")
+
+
+            nearby_partners = get_nearby_partners(
+                donor_lat, donor_lon,
+                partners_in_requests,
+                radius_km=self.DEFAULT_RADIUS_KM  
+            )
+
+            distance_map = {
+                item['partner'].id: item['distance_km']
+                for item in nearby_partners
+            }
+            nearby_partner_ids = list(distance_map.keys())
+
+            open_requests = open_requests.filter(partner_id__in=nearby_partner_ids)
+
+            data = PartnerDonorRequestPublicSerializer(open_requests, many=True).data
+            for item in data:
+                partner_id = next(
+                    (req.partner_id for req in open_requests if req.id == item['id']),
+                    None
+                )
+                item['distance_km'] = distance_map.get(partner_id, None)
+
+            data = sorted(data, key=lambda x: x['distance_km'] or 999)
+            return Response(data)
+
+        
+        return Response(
+            PartnerDonorRequestPublicSerializer(open_requests, many=True).data
+        )
 
 
 from .models import OTPCode
@@ -461,6 +525,182 @@ class VerifyOTPView(APIView):
                 'quantity': otp.request.quantity,
             })
 
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+
+
+class DonorPartnerRequestListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+
+            if not token:
+                return Response({'error': 'No token provided.'}, status=401)
+
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            # Must be partner
+            if payload.get('type') != 'partner':
+                return Response({'error': 'Only partners can access this.'}, status=403)
+
+            partner = Partners.objects.get(id=payload['id'])
+
+            # Fetch only THIS partner's requests
+            requests = PartnerDonorRequest.objects.filter(
+                partner=partner,
+                status__in=['open', 'assigned']
+            ).select_related('partner', 'assigned_donor').order_by('-created_at')
+
+            data = PartnerDonorRequestPublicSerializer(requests, many=True).data
+            return Response(data)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=401)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=401)
+        except Partners.DoesNotExist:
+            return Response({'error': 'Partner not found.'}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+# rating
+
+class SubmitAttenderRatingView(APIView):
+    """Attender rates partner after request fulfilled"""
+
+    def post(self, request, reference_id):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'donor':
+                return Response(
+                    {'error': 'Only attenders can rate.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            donor = Donor.objects.get(id=payload['id'])
+            req = AttenderRequest.objects.get(
+                reference_id=reference_id,
+                attender=donor,
+                status='fulfilled'
+            )
+
+            # Check not already rated
+            if AttenderRating.objects.filter(request=req).exists():
+                return Response(
+                    {'error': 'Already rated this request.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            stars = request.data.get('stars')
+            review = request.data.get('review', '')
+            has_complaint = request.data.get('has_complaint', False)
+            complaint_type = request.data.get('complaint_type', None)
+            complaint_detail = request.data.get('complaint_detail', '')
+
+            if not stars or int(stars) not in range(1, 6):
+                return Response(
+                    {'error': 'Stars must be between 1 and 5.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            rating = AttenderRating.objects.create(
+                attender=donor,
+                partner=req.partner if hasattr(req, 'partner') else None,
+                request=req,
+                stars=int(stars),
+                review=review,
+                has_complaint=has_complaint,
+                complaint_type=complaint_type if has_complaint else None,
+                complaint_detail=complaint_detail if has_complaint else ''
+            )
+
+            # Check bad ratings — suspend if 5+
+            if has_complaint:
+                bad_count = AttenderRating.objects.filter(
+                    partner=rating.partner,
+                    has_complaint=True
+                ).count()
+
+                if bad_count >= 5:
+                    rating.partner.is_live = False
+                    rating.partner.save()
+
+            return Response({
+                'message': 'Rating submitted successfully! ✅',
+                'stars': stars
+            }, status=status.HTTP_201_CREATED)
+
+        except AttenderRequest.DoesNotExist:
+            return Response(
+                {'error': 'Fulfilled request not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class SubmitDonorRatingView(APIView):
+    """Partner rates donor after OTP verified"""
+
+    def post(self, request, request_id):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can rate donors.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            partner = Partners.objects.get(id=payload['id'])
+            req = PartnerDonorRequest.objects.get(
+                id=request_id,
+                partner=partner,
+                status='fulfilled'
+            )
+
+            # Check not already rated
+            if DonorRating.objects.filter(request=req).exists():
+                return Response(
+                    {'error': 'Already rated this donor.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            stars = int(request.data.get('stars', 5))
+            review = request.data.get('review', '')
+
+            DonorRating.objects.create(
+                partner=partner,
+                donor=req.assigned_donor,
+                request=req,
+                stars=stars,
+                review=review
+            )
+
+            # Update donor reliability score based on rating
+            donor = req.assigned_donor
+            if stars >= 4:
+                donor.reliability_score = min(100, donor.reliability_score + 5)
+            elif stars <= 2:
+                donor.reliability_score = max(0, donor.reliability_score - 5)
+            donor.save()
+
+            return Response({
+                'message': 'Donor rated successfully! ✅'
+            }, status=status.HTTP_201_CREATED)
+
+        except PartnerDonorRequest.DoesNotExist:
+            return Response(
+                {'error': 'Fulfilled request not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:

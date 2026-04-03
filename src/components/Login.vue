@@ -79,19 +79,7 @@
             </router-link>
           </div>
 
-          <!-- Social Login -->
-          <div class="text-muted small">Or you can join with</div>
-          <div class="social-container">
-            <div class="social-icon-btn" @click="handleGoogleLogin">
-              <i class="fa-brands fa-google"></i>
-            </div>
-            <div class="social-icon-btn">
-              <i class="fa-brands fa-facebook-f" style="color: #1877F2;"></i>
-            </div>
-            <div class="social-icon-btn">
-              <i class="fa-brands fa-twitter" style="color: #1DA1F2;"></i>
-            </div>
-          </div>
+          
         </form>
       </div>
     </div>
@@ -146,10 +134,7 @@ export default {
       }
     },
 
-    // 🔐 Placeholder for Google login
-    async handleGoogleLogin() {
-      alert("Google login integration pending (connect with backend token)");
-    },
+    
   },
 
   mounted() {

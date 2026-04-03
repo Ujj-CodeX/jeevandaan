@@ -227,3 +227,84 @@ class InterPartnerRequest(models.Model):
 
     def __str__(self):
         return f"{self.requesting_partner.hospital_name} → {self.fulfilling_partner.hospital_name} | {self.blood_group}"
+class AttenderRating(models.Model):
+    COMPLAINT_TYPES = [
+        ('exchange_condition', 'Asked for blood exchange'),
+        ('overcharging', 'Charged extra fees'),
+        ('misbehavior', 'Staff misbehavior'),
+        ('fake_stock', 'Wrong stock shown'),
+        ('other', 'Other'),
+    ]
+
+    # Attender rates partner
+    attender = models.ForeignKey(
+        'users.Donor',
+        on_delete=models.CASCADE,
+        related_name='ratings_given'
+    )
+    partner = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.CASCADE,
+        related_name='ratings_received'
+    )
+    request = models.OneToOneField(
+        AttenderRequest,
+        on_delete=models.CASCADE,
+        related_name='rating'
+    )
+
+    # Rating
+    stars = models.IntegerField(
+        choices=[(i, i) for i in range(1, 6)]
+    )
+    review = models.TextField(blank=True, null=True)
+
+    # Complaint
+    has_complaint = models.BooleanField(default=False)
+    complaint_type = models.CharField(
+        max_length=50,
+        choices=COMPLAINT_TYPES,
+        blank=True, null=True
+    )
+    complaint_detail = models.TextField(blank=True, null=True)
+    complaint_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('investigating', 'Investigating'),
+            ('resolved', 'Resolved'),
+            ('dismissed', 'Dismissed'),
+        ],
+        default='pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.attender.name} → {self.partner.hospital_name} {self.stars}⭐"
+
+class DonorRating(models.Model):
+    # Partner rates donor
+    partner = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.CASCADE,
+        related_name='donor_ratings_given'
+    )
+    donor = models.ForeignKey(
+        'users.Donor',
+        on_delete=models.CASCADE,
+        related_name='ratings_received'
+    )
+    request = models.OneToOneField(
+        PartnerDonorRequest,
+        on_delete=models.CASCADE,
+        related_name='donor_rating'
+    )
+
+    stars = models.IntegerField(
+        choices=[(i, i) for i in range(1, 6)]
+    )
+    review = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.partner.hospital_name} → Donor {self.stars}⭐"

@@ -123,7 +123,7 @@
     <span v-else>Register Facility</span>
 </button>
             <p class="text-center mt-3 text-muted small">Already registered?
-              <a href="#" class="text-primary fw-bold text-decoration-none">Partner Login</a>
+              <RouterLink to="/partners_login" class="text-primary fw-bold text-decoration-none">Partner Login</RouterLink>
             </p>
           </form>
         </div>

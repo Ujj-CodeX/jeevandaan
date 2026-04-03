@@ -28,7 +28,7 @@
     </nav>
 
     <!-- OTP Banner — shown to both donor and partner -->
-    <div v-if="otpCode" class="container pt-3">
+    <div v-if="otpCode && userType === 'donor'" class="container pt-3">
       <div class="alert border-0 rounded-4 text-center shadow-sm"
         style="background: linear-gradient(135deg, #fff5f5, #ffe0e0)">
         <small class="text-muted d-block mb-1 fw-bold text-uppercase">
@@ -48,6 +48,83 @@
 
     <!-- Chat messages area -->
     <div class="flex-grow-1 container py-3 chat-scroll" ref="chatContainer">
+
+      <!-- Cancel section — donor only -->
+<div v-if="userType === 'donor' && requestInfo?.status === 'assigned'"
+    class="bg-white border-top p-3">
+    <div class="container">
+        <button
+            class="btn btn-outline-secondary btn-sm rounded-pill w-100"
+            @click="showCancelModal = true"
+        >
+            <i class="fas fa-times me-1"></i> Cancel Acceptance
+        </button>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div v-if="showCancelModal" class="modal-overlay" @click.self="showCancelModal = false">
+    <div class="bg-white rounded-4 shadow-lg p-4" style="max-width:440px;width:100%">
+        <h5 class="fw-bold mb-1 text-danger">Cancel Acceptance</h5>
+        <p class="text-muted small mb-4">
+            Please provide a valid reason. Your reliability score will be deducted by 10 points.
+        </p>
+
+        <!-- IPC warning if multiple cancellations -->
+        <div v-if="donor?.cancellation_count >= 2"
+            class="alert border-0 rounded-4 mb-3 p-3"
+            style="background:#fff5f5">
+            <i class="fas fa-gavel text-danger me-2"></i>
+            <strong class="text-danger small">Legal Notice</strong>
+            <p class="text-danger small mb-0 mt-1">
+                Multiple cancellations after accepting requests may invite disciplinary
+                action under IPC provisions. Your account may be suspended.
+            </p>
+        </div>
+
+        <div class="mb-3">
+            <label class="small fw-bold text-muted">Reason for cancellation *</label>
+            <select class="form-select mb-2" v-model="cancelReason">
+                <option disabled value="">Select reason</option>
+                <option value="health_issue">Health issue / Not feeling well</option>
+                <option value="emergency">Personal emergency</option>
+                <option value="transport">Transport issue</option>
+                <option value="wrong_blood_group">Wrong blood group request</option>
+                <option value="other">Other</option>
+            </select>
+            <textarea
+                class="form-control"
+                rows="3"
+                v-model="cancelDetail"
+                placeholder="Additional details (optional)"
+            ></textarea>
+        </div>
+
+        <!-- Error -->
+        <div v-if="cancelError" class="alert alert-danger border-0 rounded-4 small mb-3">
+            {{ cancelError }}
+        </div>
+
+        <div class="d-flex gap-2">
+            <button
+                class="btn btn-danger flex-grow-1 py-3 fw-bold rounded-3"
+                @click="cancelAcceptance"
+                :disabled="cancelling || !cancelReason"
+            >
+                <span v-if="cancelling">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                </span>
+                <span v-else>Submit & Cancel</span>
+            </button>
+            <button
+                class="btn btn-light flex-grow-1 py-3 rounded-3"
+                @click="showCancelModal = false"
+            >
+                Go Back
+            </button>
+        </div>
+    </div>
+</div>
 
       <!-- Loading -->
       <div v-if="loading" class="text-center py-5">
@@ -101,7 +178,7 @@
               </small>
               <div :class="['chat-bubble px-3 py-2 rounded-4 shadow-sm',
                 isMyMessage(msg) ? 'bubble-mine' : 'bubble-theirs']">
-                <p class="mb-0 fw-bold small">{{ msg.message_display }}</p>
+                <p class="mb-0 fw-bold small">{{ formatMessage(msg.message_display) }}</p>
                 <small class="opacity-75 smallest">{{ timeAgo(msg.sent_at) }}</small>
               </div>
             </div>
@@ -156,6 +233,13 @@ export default {
       userType: null,    // 'donor' or 'partner'
       pollInterval: null,
 
+      showCancelModal: false,
+      cancelReason: '',
+      cancelDetail: '',
+      cancelling: false,
+      cancelError: null,
+      donor: null,
+
       // Donor messages
       donorMessages: [
         { value: 'on_the_way', label: '🚗 On my way' },
@@ -167,16 +251,18 @@ export default {
 
       // Partner messages
       partnerMessages: [
-        { value: 'on_the_way', label: '⏳ Waiting for donor' },
-        { value: 'reached', label: '✅ Donor arrived' },
-        { value: 'delayed', label: '⏰ Please hurry' },
-        { value: 'donated', label: '🩸 Donation received' },
-        { value: 'unable_to_come', label: '❌ Request cancelled' },
+        { value: 'waiting_for_donor', label: '⏳ Waiting for donor' },
+        { value: 'donor_arrived', label: '✅ Donor arrived' },
+        { value: 'please_hurry', label: '⏰ Please hurry' },
+        { value: 'donation_received', label: '🩸 Donation received' },
+        { value: 'request_cancelled', label: '❌ Request cancelled' },
       ],
     }
-  },
+  }, 
 
   computed: {
+
+    
     // Show messages based on who is logged in
     availableMessages() {
       return this.userType === 'donor'
@@ -186,8 +272,17 @@ export default {
   },
 
   mounted() {
+
+    this.fetchDonorInfo()
     this.requestId = this.$route.params.id
-    this.userType = localStorage.getItem('user_type') || 'donor'
+    const userType = localStorage.getItem('user_type')
+    
+
+if (userType === 'partner') {
+  this.userType = 'partner'
+} else {
+  this.userType = 'donor'
+}
 
     // Get OTP
     const queryOtp = this.$route.query.otp
@@ -201,6 +296,8 @@ export default {
     this.pollInterval = setInterval(() => {
       this.fetchMessages()
     }, 8000)
+
+    
   },
 
   beforeUnmount() {
@@ -208,15 +305,21 @@ export default {
   },
 
   methods: {
+
+    formatMessage(text) {
+  return text.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+},
     // Check if message is from current user
     isMyMessage(msg) {
       return msg.sender_type === this.userType
+      
     },
 
     async fetchMessages() {
       try {
         const response = await api.get(`/api/chat/${this.requestId}/history/`)
         this.messages = Array.isArray(response.data) ? response.data : []
+        console.log("MESSAGES:", this.messages)
 
         // Extract OTP from system message if not already set
         if (!this.otpCode) {
@@ -238,22 +341,31 @@ export default {
     },
 
     async fetchRequestInfo() {
-      try {
-        // Different endpoint based on user type
-        if (this.userType === 'donor') {
-          const response = await api.get(`/api/requests/donor/list/`)
-          const req = response.data.find(r => r.id === parseInt(this.requestId))
-          if (req) this.requestInfo = req
+    try {
+        if (this.userType === 'partner') {
+            // Partner fetches from their own requests
+            const response = await api.get('/api/requests/donor-requests/')
+            const req = response.data.find(
+                r => r.id === parseInt(this.requestId)
+            )
+            if (req) this.requestInfo = req
         } else {
-          // Partner fetches from their active requests
-          const response = await api.get(`/api/requests/donor/list/`)
-          const req = response.data.find(r => r.id === parseInt(this.requestId))
-          if (req) this.requestInfo = req
+            // Donor fetches from open list
+            const bg = encodeURIComponent(
+                localStorage.getItem('donor_blood_group') || ''
+            )
+            const response = await api.get(
+                `/api/requests/donor/detail/?blood_group=${bg}`
+            )
+            const req = response.data.find(
+                r => r.id === parseInt(this.requestId)
+            )
+            if (req) this.requestInfo = req
         }
-      } catch (err) {
+    } catch (err) {
         console.error('Request info fetch failed:', err)
-      }
-    },
+    }
+},
 
     async sendMessage(message) {
       this.sending = true
@@ -278,7 +390,61 @@ export default {
       if (diff < 60) return `${diff} mins ago`
       if (diff < 1440) return `${Math.floor(diff / 60)} hrs ago`
       return `${Math.floor(diff / 1440)} days ago`
+    },
+
+
+    async cancelAcceptance() {
+    if (!this.cancelReason) {
+        this.cancelError = 'Please select a reason.'
+        return
     }
+
+    this.cancelling = true
+    this.cancelError = null
+
+    try {
+        const response = await api.post(
+            `/api/requests/donor/${this.requestId}/cancel/`,
+            {
+                reason: this.cancelReason,
+                detail: this.cancelDetail
+            }
+        )
+
+        // Check if account locked
+        if (response.data.account_locked) {
+            alert(
+                `⚠️ Your account has been locked due to multiple cancellations.\n\n` +
+                `Username: ${response.data.username}\n` +
+                `Locked until: ${response.data.locked_until}\n\n` +
+                `Multiple cancellations after accepting requests may invite ` +
+                `disciplinary action under IPC provisions.`
+            )
+            localStorage.removeItem('access_token')
+            this.$router.push('/')
+            return
+        }
+
+        this.showCancelModal = false
+        alert(`Request cancelled. Reliability score deducted by 10 points.`)
+        this.$router.push('/dashboard')
+
+    } catch (err) {
+        this.cancelError = err.response?.data?.error || 'Cancellation failed.'
+    } finally {
+        this.cancelling = false
+    }
+},
+
+async fetchDonorInfo() {
+    if (this.userType !== 'donor') return
+    try {
+        const response = await api.get('/api/users/profile/')
+        this.donor = response.data
+    } catch (err) {
+        console.error(err)
+    }
+},
   }
 }
 </script>
