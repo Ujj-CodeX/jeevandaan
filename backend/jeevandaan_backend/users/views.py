@@ -34,7 +34,7 @@ def generate_jwt_token(donor_id):
 #register--------------------------------------------------------------------
 
 class DonorRegisterView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     def post(self,request):
         serializer = DonorRegisterSerializer(data=request.data)
         if serializer.is_valid():

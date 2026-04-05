@@ -46,7 +46,7 @@ def generate_partner_token(partner_id):
 
 
 class NearbyPartnersView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         lat = request.query_params.get('lat')
