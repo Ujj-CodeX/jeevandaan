@@ -393,7 +393,7 @@
                                 </div>
                                 <div v-else-if="uploads.letterhead">
                                     <i class="fas fa-check-circle text-success fs-3 mb-2"></i>
-                                    <p class="small mb-0 text-success fw-bold">Letterhead Uploaded ✅</p>
+                                    <p class="small mb-0 text-success fw-bold">Letterhead Uploaded  </p>
                                 </div>
                                 <div v-else>
                                     <i class="fa-solid fa-file-signature mb-2 fs-3 text-muted"></i>
@@ -428,7 +428,7 @@
                                         class="img-fluid rounded-3 mb-2"
                                         style="height:80px;object-fit:cover"
                                     >
-                                    <p class="small mb-0 text-success fw-bold">Photo Uploaded ✅</p>
+                                    <p class="small mb-0 text-success fw-bold">Photo Uploaded  </p>
                                 </div>
                                 <div v-else>
                                     <i class="fa-solid fa-camera mb-2 fs-3 text-muted"></i>
@@ -459,7 +459,7 @@
                                 </div>
                                 <div v-else-if="uploads.attender_id_proof">
                                     <i class="fas fa-check-circle text-success fs-3 mb-2"></i>
-                                    <p class="small mb-0 text-success fw-bold">ID Proof Uploaded ✅</p>
+                                    <p class="small mb-0 text-success fw-bold">ID Proof Uploaded  </p>
                                 </div>
                                 <div v-else>
                                     <i class="fa-solid fa-id-card mb-2 fs-3 text-muted"></i>

@@ -1,6 +1,24 @@
 
     <style>
 
+    .blood-group-circle {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #E63946, #C1121F);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
+}
+
+.text-sky { color: #00AEEF !important; }
+.smallest { font-size: 0.7rem; }
+
     .partner-row {
     transition: all 0.2s ease;
     border-radius: 12px;
@@ -306,8 +324,29 @@
                 <span :class="['badge rounded-pill', getStockBadge(partner)]">
                     {{ getStockLabel(partner) }}
                 </span>
+
+                <a
+  v-if="partner.latitude != null && partner.longitude != null"
+  :href="getGoogleMapsLink(partner)"
+  target="_blank"
+  class="btn btn-sm btn-outline-success rounded-circle p-1"
+  style="width:30px;height:30px;display:flex;
+  align-items:center;justify-content:center"
+  title="Navigate"
+  @click.stop
+>
+  <i class="fas fa-location-arrow"></i>
+</a>
+
+
+                
+
+
+
                 <i class="fa-solid fa-chevron-right text-muted small"></i>
             </div>
+
+            
         </div>
     </div>
 </div>
@@ -332,7 +371,7 @@
     <span class="ms-2 text-muted small">Loading requests...</span>
   </div>
 
-  <!-- ✅ EMPTY STATE -->
+  <!--   EMPTY STATE -->
   <div v-else-if="partnerRequests.length === 0" class="jd-card p-5 text-center">
     <i class="fa-solid fa-heart-crack text-danger mb-3" style="font-size: 2.5rem;"></i>
     <h6 class="fw-bold mb-1">No Pending Requests Right Now</h6>
@@ -401,6 +440,214 @@
     </div>
   </div>
 
+</div>
+
+
+<!----My attenders request-->
+
+<!-- My Raised Requests -->
+<div class="mt-5 mb-4">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+            <h5 class="fw-bold mb-0">My Raised Requests</h5>
+            <p class="text-muted small mb-0">
+                Blood requests you have raised
+            </p>
+        </div>
+        <button
+            class="btn btn-outline-danger btn-sm rounded-pill px-3"
+            @click="fetchMyRequests"
+        >
+            <i class="fa-solid fa-rotate-right me-1"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="myRequestsLoading" class="text-center py-4">
+        <div class="spinner-border spinner-border-sm text-danger"></div>
+        <span class="ms-2 text-muted small">Loading your requests...</span>
+    </div>
+
+    <!-- Empty -->
+    <div v-else-if="myRequests.length === 0" class="jd-card p-5 text-center">
+        <i class="fa-solid fa-file-medical text-danger mb-3"
+            style="font-size:2.5rem;opacity:0.3"></i>
+        <h6 class="fw-bold mb-1">No Requests Raised Yet</h6>
+        <p class="text-muted small mb-0">
+            When you raise a blood request it will appear here.
+        </p>
+        <router-link to="/user_request"
+            class="btn btn-danger btn-sm rounded-pill px-4 mt-3">
+            Raise a Request
+        </router-link>
+    </div>
+
+    <!-- Request cards -->
+    <div v-else class="row g-3">
+        <div
+            class="col-md-6 col-lg-4"
+            v-for="req in myRequests"
+            :key="req.reference_id"
+        >
+            <div class="jd-card p-3 h-100">
+
+                <!-- Status badge + urgency -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span :class="['badge rounded-pill px-3 py-2',
+                        req.status === 'fulfilled' ? 'bg-success' :
+                        req.status === 'pending' ? 'bg-warning text-dark' :
+                        req.status === 'expired' ? 'bg-secondary' :
+                        'bg-danger']">
+                        <i :class="['me-1 small',
+                            req.status === 'fulfilled' ? 'fas fa-check' :
+                            req.status === 'pending' ? 'fas fa-clock' :
+                            req.status === 'expired' ? 'fas fa-times' :
+                            'fas fa-spinner']">
+                        </i>
+                        {{ req.status?.toUpperCase() }}
+                    </span>
+                    <span :class="['badge rounded-pill small',
+                        req.urgency === 'critical' ? 'bg-danger' :
+                        req.urgency === 'urgent' ? 'bg-warning text-dark' :
+                        'bg-light text-muted border']">
+                        {{ req.urgency?.toUpperCase() }}
+                    </span>
+                </div>
+
+                <!-- Blood group + quantity -->
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="blood-group-circle">
+                        {{ req.blood_group }}
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">{{ req.patient_name }}</h6>
+                        <small class="text-muted">
+                            {{ req.quantity }} units needed
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="p-3 bg-light rounded-4 mb-3">
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <small class="text-muted">
+                            <i class="fas fa-hospital me-1"></i>Hospital
+                        </small>
+                        <small class="fw-bold text-end"
+                            style="max-width:140px;overflow:hidden;
+                            text-overflow:ellipsis;white-space:nowrap">
+                            {{ req.hospital_name }}
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <small class="text-muted">
+                            <i class="fas fa-location-dot me-1"></i>City
+                        </small>
+                        <small class="fw-bold">{{ req.city }}</small>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>Raised
+                        </small>
+                        <small class="fw-bold">{{ timeAgo(req.created_at) }}</small>
+                    </div>
+
+                    <!-- Fulfilled at — only show if fulfilled -->
+                    <div v-if="req.status === 'fulfilled'"
+                        class="d-flex justify-content-between py-1 border-bottom">
+                        <small class="text-muted">
+                            <i class="fas fa-check-circle me-1 text-success"></i>
+                            Fulfilled
+                        </small>
+                        <small class="fw-bold text-success">
+                            {{ formatDate(req.updated_at) }}
+                        </small>
+                    </div>
+
+                    <!-- Expires at — only show if pending -->
+                    <div v-if="req.status === 'pending'"
+                        class="d-flex justify-content-between py-1 border-bottom">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1 text-warning"></i>
+                            Expires
+                        </small>
+                        <small :class="['fw-bold',
+                            isExpiringSoon(req.expires_at) ?
+                            'text-danger' : 'text-muted']">
+                            {{ formatDate(req.expires_at) }}
+                        </small>
+                    </div>
+
+                    <!-- Reference ID with copy -->
+                    <div class="d-flex justify-content-between align-items-center py-1">
+                        <small class="text-muted">
+                            <i class="fas fa-hashtag me-1"></i>Ref ID
+                        </small>
+                        <div class="d-flex align-items-center gap-1">
+                            <small class="fw-bold text-sky"
+                                style="font-size:0.65rem;
+                                max-width:100px;overflow:hidden;
+                                text-overflow:ellipsis">
+                                {{ req.reference_id?.substring(0, 12) }}...
+                            </small>
+                            <button
+                                class="btn p-0 border-0"
+                                style="background:none"
+                                @click="copyRefId(req.reference_id)"
+                                :title="'Copy: ' + req.reference_id"
+                            >
+                                <i :class="['fa-sm',
+                                    copiedRefId === req.reference_id ?
+                                    'fas fa-check text-success' :
+                                    'far fa-copy text-muted']">
+                                </i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="d-flex gap-2">
+                    <!-- Rate button — only if fulfilled and not yet rated -->
+                    <button
+                        v-if="req.status === 'fulfilled' && !req.is_rated"
+                        class="btn btn-outline-danger btn-sm rounded-pill flex-grow-1 py-2"
+                        @click="openRatingModal(req)"
+                    >
+                        <i class="fas fa-star me-1"></i> Rate Partner
+                    </button>
+
+                    <!-- Rated badge -->
+                    <span v-if="req.is_rated"
+                        class="badge bg-success-subtle text-success
+                        rounded-pill px-3 py-2 flex-grow-1 text-center">
+                         Rated
+                    </span>
+
+                    <!-- Copy full ref ID -->
+                    <button
+                        class="btn btn-light btn-sm rounded-pill py-2 px-3"
+                        @click="copyRefId(req.reference_id)"
+                        :title="'Copy Reference ID'"
+                    >
+                        <i :class="[
+                            copiedRefId === req.reference_id ?
+                            'fas fa-check text-success' :
+                            'far fa-copy text-muted']">
+                        </i>
+                    </button>
+                </div>
+
+                <!-- Copied toast -->
+                <div v-if="copiedRefId === req.reference_id"
+                    class="text-center mt-2">
+                    <small class="text-success smallest fw-bold">
+                         Reference ID copied!
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 
@@ -612,7 +859,7 @@
   </div>
   <p class="small text-muted mb-3">
     Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
-    Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✅' : '❌' }}</strong>
+    Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? ' ' : '❌' }}</strong>
   </p>
 
   <div v-if="!donor.is_aadhaar_verified" class="alert alert-danger py-2 px-3 small border-0 mb-0">
@@ -900,6 +1147,121 @@
     </div>
 </div>
 
+<!-- Rating & Complaint Modal -->
+<!-- Rating Modal -->
+<div v-if="showRatingModal" class="modal-overlay"
+    @click.self="showRatingModal = false">
+    <div class="registration-card shadow-lg" style="max-width:450px">
+        <button class="close-btn" @click="showRatingModal = false">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-1">Rate Partner</h5>
+            <p class="text-muted small mb-4">{{ ratingPartner?.hospital_name }}</p>
+
+            <!-- Reference ID input -->
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">
+                    Your Request Reference ID *
+                </label>
+                <input type="text"
+                    class="form-control"
+                    v-model="ratingForm.reference_id"
+                    placeholder="Enter reference ID of your request">
+                <small class="text-muted">
+                    Rate only after your request is fulfilled
+                </small>
+            </div>
+
+            <!-- Stars -->
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Rating *</label>
+                <div class="d-flex gap-2 mt-1">
+                    <button
+                        v-for="star in 5"
+                        :key="star"
+                        type="button"
+                        class="btn p-0 fs-4"
+                        @click="ratingForm.stars = star"
+                    >
+                        <i :class="['fas fa-star',
+                            star <= ratingForm.stars ? 'text-warning' : 'text-muted']">
+                        </i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Review -->
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Review</label>
+                <textarea class="form-control" rows="2"
+                    v-model="ratingForm.review"
+                    placeholder="Share your experience (optional)">
+                </textarea>
+            </div>
+
+            <!-- Complaint -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                        id="hasComplaint"
+                        v-model="ratingForm.has_complaint">
+                    <label class="form-check-label small text-muted"
+                        for="hasComplaint">
+                        File a complaint against this partner
+                    </label>
+                </div>
+            </div>
+
+            <div v-if="ratingForm.has_complaint">
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Complaint Type</label>
+                    <select class="form-select" v-model="ratingForm.complaint_type">
+                        <option disabled value="">Select type</option>
+                        <option value="exchange_condition">
+                            Asked for blood exchange
+                        </option>
+                        <option value="overcharging">Charged extra fees</option>
+                        <option value="misbehavior">Staff misbehavior</option>
+                        <option value="fake_stock">Wrong stock shown</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Complaint Detail</label>
+                    <textarea class="form-control" rows="2"
+                        v-model="ratingForm.complaint_detail"
+                        placeholder="Describe what happened">
+                    </textarea>
+                </div>
+            </div>
+
+            <!-- Error/Success -->
+            <div v-if="ratingError"
+                class="alert alert-danger border-0 rounded-4 small mb-3">
+                {{ ratingError }}
+            </div>
+            <div v-if="ratingSuccess"
+                class="alert alert-success border-0 rounded-4 small mb-3">
+                {{ ratingSuccess }}
+            </div>
+
+            <button
+                class="btn btn-danger w-100 py-3 fw-bold rounded-4"
+                @click="submitRating"
+                :disabled="submittingRating || !ratingForm.stars || !ratingForm.reference_id"
+            >
+                <span v-if="submittingRating">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                </span>
+                <span v-else>
+                    <i class="fas fa-star me-2"></i> Submit Rating
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
 
 
   </div>
@@ -936,7 +1298,31 @@ enrollForm: {
     user: {},
     enrolledCamps: [],
     enrolledLoading: false,
+    
+    
+  
+
 },
+
+//attender_card
+myRequests: [],
+myRequestsLoading: false,
+copiedRefId: null,
+
+// Rating
+showRatingModal: false,
+ratingPartner: null,
+ratingForm: {
+    reference_id: '',
+    stars: 0,
+    review: '',
+    has_complaint: false,
+    complaint_type: '',
+    complaint_detail: ''
+},
+submittingRating: false,
+ratingError: null,
+ratingSuccess: null,
 enrolling: false,
     }
   },
@@ -977,7 +1363,7 @@ async saveGPSLocation() {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude
                 })
-                console.log('GPS location saved ✅')
+                console.log('GPS location saved  ')
             } catch (err) {
                 console.error('Failed to save GPS:', err)
             }
@@ -1027,6 +1413,7 @@ getStockLabel(partner) {
         await this.fetchPartnerRequests() 
         await this.fetchNearbyPartners() 
         await this.fetchNearbyCamps()
+        await this.fetchMyRequests()
 
       } catch (err) {
         this.error = 'Could not load your profile. Please try again.'
@@ -1253,9 +1640,117 @@ async enrollInCamp() {
     }
   },
 
+
   
+openRatingModal(partner) {
+    this.ratingPartner = partner
+    this.ratingForm = {
+        reference_id: '',
+        stars: 0,
+        review: '',
+        has_complaint: false,
+        complaint_type: '',
+        complaint_detail: ''
+    }
+    this.ratingError = null
+    this.ratingSuccess = null
+    this.showRatingModal = true
+},
 
-  },
+async submitRating() {
+    if (!this.ratingForm.stars) {
+        this.ratingError = 'Please select star rating.'
+        return
+    }
+    if (!this.ratingForm.reference_id) {
+        this.ratingError = 'Reference ID is required.'
+        return
+    }
 
-  }
+    this.submittingRating = true
+    this.ratingError = null
+
+    try {
+        await api.post(
+            `/api/requests/attender/${this.ratingForm.reference_id}/rate/`,
+            {
+                stars: this.ratingForm.stars,
+                review: this.ratingForm.review,
+                has_complaint: this.ratingForm.has_complaint,
+                complaint_type: this.ratingForm.complaint_type,
+                complaint_detail: this.ratingForm.complaint_detail
+            }
+        )
+
+        this.ratingSuccess = 'Rating submitted successfully!  '
+        setTimeout(() => {
+            this.showRatingModal = false
+            this.ratingSuccess = null
+        }, 2000)
+
+    } catch (err) {
+        this.ratingError = err.response?.data?.error ||
+            'Failed to submit. Make sure request is fulfilled.'
+    } finally {
+        this.submittingRating = false
+    }
+},
+
+// Attnder opening card 
+// ── Fetch my raised requests ─────────────
+async fetchMyRequests() {
+    this.myRequestsLoading = true
+    try {
+        const response = await api.get('/api/requests/attender/my-requests/')
+        this.myRequests = Array.isArray(response.data) ? response.data : []
+    } catch (err) {
+        console.error('My requests fetch failed:', err)
+        this.myRequests = []
+    } finally {
+        this.myRequestsLoading = false
+    }
+},
+
+// ── Copy reference ID ────────────────────
+async copyRefId(refId) {
+    try {
+        await navigator.clipboard.writeText(refId)
+        this.copiedRefId = refId
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+            this.copiedRefId = null
+        }, 2000)
+    } catch (err) {
+        // Fallback for older browsers
+        const el = document.createElement('textarea')
+        el.value = refId
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+
+        this.copiedRefId = refId
+        setTimeout(() => {
+            this.copiedRefId = null
+        }, 2000)
+    }
+},
+
+getGoogleMapsLink(partner) {
+    const lat = partner.latitude
+    const lng = partner.longitude
+    const name = encodeURIComponent(partner.hospital_name)
+
+    // This opens Google Maps with:
+    // → Destination = partner location
+    // → Label = hospital name
+    // → Navigation mode = driving
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${name}&travelmode=driving`
+},
+}
+}
+
+  
+ 
 </script>

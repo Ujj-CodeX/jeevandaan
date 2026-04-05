@@ -16,9 +16,12 @@ from .views import (
     PartnerCampsView,            # ← new
     NearbyCampsView,             # ← new
     EnrollCampView,              # ← new
-    UpdateStockAfterCampView,    # ← new
-    
+    UpdateStockAfterCampView,
+    RaiseInterPartnerRequestView,
+    InterPartnerRequestListView,
+    AcceptInterPartnerRequestView,
 )
+
 
 urlpatterns = [
     path('register/', PartnerRegisterView.as_view()),
@@ -37,11 +40,10 @@ urlpatterns = [
     path('camps/<int:camp_id>/enroll/', EnrollCampView.as_view()),
     path('camps/<int:camp_id>/update-stock/', UpdateStockAfterCampView.as_view()),
     path('camps/enrolled/', EnrolledCampsListView.as_view(), name='enrolled-camps'),
-
-
-    
-
-
     path('camps/<int:camp_id>/download/', DownloadCampEnrollmentsView.as_view()),
+    path('inter-request/', RaiseInterPartnerRequestView.as_view()),
+    path('inter-requests/', InterPartnerRequestListView.as_view()),
+    path('inter-requests/<int:inter_request_id>/accept/', AcceptInterPartnerRequestView.as_view()),
+
 
 ]

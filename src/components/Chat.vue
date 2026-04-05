@@ -212,6 +212,58 @@
       </div>
     </div>
 
+    <!-- Rating section — shown after donation fulfilled -->
+<div v-if="showDonorRating" class="container pb-4">
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h6 class="fw-bold mb-3 text-center">
+            🎉 Donation Complete! Rate your experience
+        </h6>
+
+        <!-- Stars -->
+        <div class="d-flex justify-content-center gap-2 mb-3">
+            <button
+                v-for="star in 5"
+                :key="star"
+                type="button"
+                class="btn p-0 fs-3"
+                @click="donorRatingForm.stars = star"
+            >
+                <i :class="['fas fa-star',
+                    star <= donorRatingForm.stars ? 'text-warning' : 'text-muted']">
+                </i>
+            </button>
+        </div>
+
+        <textarea
+            class="form-control border-0 bg-light mb-3"
+            rows="2"
+            v-model="donorRatingForm.review"
+            placeholder="How was your experience? (optional)">
+        </textarea>
+
+        <div v-if="donorRatingError"
+            class="alert alert-danger border-0 rounded-4 small mb-2">
+            {{ donorRatingError }}
+        </div>
+
+        <button
+            class="btn btn-danger w-100 py-3 fw-bold rounded-4"
+            @click="submitDonorRating"
+            :disabled="submittingDonorRating || !donorRatingForm.stars"
+        >
+            <span v-if="submittingDonorRating">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+            </span>
+            <span v-else>Submit Rating</span>
+        </button>
+
+        <button class="btn btn-link text-muted small w-100 mt-1"
+            @click="showDonorRating = false">
+            Skip for now
+        </button>
+    </div>
+</div>
+
   </div>
 </template>
 
@@ -257,6 +309,14 @@ export default {
         { value: 'donation_received', label: '🩸 Donation received' },
         { value: 'request_cancelled', label: '❌ Request cancelled' },
       ],
+
+      showDonorRating: false,
+donorRatingForm: {
+    stars: 0,
+    review: ''
+},
+submittingDonorRating: false,
+donorRatingError: null,
     }
   }, 
 
@@ -316,29 +376,60 @@ if (userType === 'partner') {
     },
 
     async fetchMessages() {
-      try {
-        const response = await api.get(`/api/chat/${this.requestId}/history/`)
+    try {
+        const response = await api.get(
+            `/api/chat/${this.requestId}/history/`
+        )
         this.messages = Array.isArray(response.data) ? response.data : []
-        console.log("MESSAGES:", this.messages)
 
-        // Extract OTP from system message if not already set
+        // Extract OTP from system message
         if (!this.otpCode) {
-          const otpMsg = this.messages.find(m => m.sender_type === 'system')
-          if (otpMsg) this.otpCode = otpMsg.otp_code
+            const otpMsg = this.messages.find(m => m.sender_type === 'system')
+            if (otpMsg) this.otpCode = otpMsg.otp_code
         }
 
-        // Scroll to bottom
+        // Show rating if donation done
+        const donationDone = this.messages.find(
+            m => m.message === 'donated' || m.message === 'otp_verified'
+        )
+        if (donationDone && this.userType === 'donor') {
+            this.showDonorRating = true
+        }
+
         this.$nextTick(() => {
-          const container = this.$refs.chatContainer
-          if (container) container.scrollTop = container.scrollHeight
+            const container = this.$refs.chatContainer
+            if (container) container.scrollTop = container.scrollHeight
         })
 
-      } catch (err) {
-        console.error('Chat fetch failed:', err)
-      } finally {
+    } catch (err) {
+        console.error(err)
+    } finally {
         this.loading = false
-      }
-    },
+    }
+},
+
+async submitDonorRating() {
+    if (!this.donorRatingForm.stars) {
+        this.donorRatingError = 'Please select star rating.'
+        return
+    }
+
+    this.submittingDonorRating = true
+
+    try {
+        await api.post(
+            `/api/requests/donor/${this.requestId}/rate/`,
+            this.donorRatingForm
+        )
+        this.showDonorRating = false
+        alert('Thank you for rating! Your feedback helps us improve.')
+    } catch (err) {
+        this.donorRatingError = err.response?.data?.error ||
+            'Rating failed. Try again.'
+    } finally {
+        this.submittingDonorRating = false
+    }
+},
 
     async fetchRequestInfo() {
     try {

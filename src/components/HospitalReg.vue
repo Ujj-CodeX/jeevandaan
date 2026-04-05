@@ -130,7 +130,7 @@
       </div>
     </div>
 
-    <!-- ✅ Vue Modal -->
+    <!--   Vue Modal -->
     <div v-if="showTermsModal" class="modal-overlay" @click.self="closeTermsModal">
       <div class="modal-box">
         <div class="modal-box-header">
@@ -138,10 +138,14 @@
           <button class="btn-close" @click="closeTermsModal"></button>
         </div>
         <div class="modal-box-body text-muted small">
-          <p>1. Facilities must maintain real-time inventory updates for blood stocks.</p>
-          <p>2. Emergency organ requests must follow national clinical protocols.</p>
-          <p>3. Patient data shared via JeevanDaan+ must be handled under HIPAA/Digital Health standards.</p>
-        </div>
+  <p>1. Facilities must maintain accurate, real-time updates of blood stock availability.</p>
+  <p>2. Request handling must be timely and precise to ensure rapid response in emergency situations.</p>
+  <p>3. Facilities must not require or request replacement donors in exchange for providing blood.</p>
+  <p>4. Blood stock must be updated immediately after fulfillment of any request or donation.</p>
+  <p>5. Stock updates after blood donation camps must be recorded promptly and accurately.</p>
+  <p>6. All activities must comply with JeevanDaan+ policies and applicable health regulations.</p>
+  <p>7. Any misuse, false reporting, or policy violation may result in administrative action or legal consequences.</p>
+</div>
         <div class="modal-box-footer">
           <button class="btn btn-primary w-100 rounded-pill" @click="acceptTerms">
             I Understand

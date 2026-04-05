@@ -245,7 +245,7 @@ class AttenderRating(models.Model):
     partner = models.ForeignKey(
         'partners.Partners',
         on_delete=models.CASCADE,
-        related_name='ratings_received'
+        related_name='ratings_received', null=True, blank=True
     )
     request = models.OneToOneField(
         AttenderRequest,

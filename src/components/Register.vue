@@ -197,7 +197,7 @@ export default {
 
                 // Redirect to dashboard after 1.5 seconds
                 setTimeout(() => {
-                    this.$router.push('/dashboard')
+                    this.$router.push('/user')
                 }, 1500)
 
             } catch (error) {
@@ -402,7 +402,7 @@ export default {
     transform: none;
   }
 
-  /* ✅ Vue Modal Styles */
+  /*   Vue Modal Styles */
   .modal-overlay {
     position: fixed;
     inset: 0;

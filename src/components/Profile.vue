@@ -16,7 +16,7 @@
         </button>
         <div class="collapse navbar-collapse" id="dashboardNav">
           <ul class="navbar-nav mx-auto">
-            <li class="nav-item"><RouterLink class="nav-link active" to="/">Home</RouterLink></li>
+            <li class="nav-item"><RouterLink class="nav-link active" to="/user">Dashboard</RouterLink></li>
             <li class="nav-item"><RouterLink class="nav-link" to="/user_request">Raise a Request</RouterLink></li>
             <li class="nav-item"><RouterLink class="nav-link" to="/profile">Profile Settings</RouterLink></li>
             <li class="nav-item"><a class="nav-link" href="#" @click.prevent="logout">Logout</a></li>
@@ -109,7 +109,7 @@
                   <h6 class="fw-bold small mb-2"><i class="fas fa-id-card me-2"></i>Link Aadhaar Card</h6>
                   <p class="smallest text-muted mb-3">Required for "Verified" badge and emergency network priority.</p>
                   <div class="input-group input-group-sm mb-2" style="max-width: 350px;">
-                    <input type="text" v-model="aadhaarInput" class="form-control" placeholder="12 Digit Number" maxlength="12">
+                    <input type="text" v-model="aadhaarNumber" class="form-control" placeholder="12 Digit Number" maxlength="12">
                     <button class="btn btn-dark" type="button" @click="submitAadhaar" :disabled="aadhaarLoading">Verify</button>
                   </div>
                   <small v-if="user.aadhaar_number" class="text-warning">Status: Pending Verification</small>
@@ -139,29 +139,51 @@
     </div>
 
     <div v-if="showPasswordModal" class="modal-backdrop d-flex align-items-center justify-content-center p-3 z-3">
-      <div class="card border-0 shadow-lg rounded-4 overflow-hidden w-100 animate-slide-up" style="max-width: 420px;">
-        <div class="bg-dark p-3 text-white d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold"><i class="fas fa-lock me-2"></i>Security Check</h6>
-          <i class="fas fa-times pointer" @click="closePasswordModal"></i>
-        </div>
-        <div class="card-body p-4">
-          <div v-if="!identityVerified">
-            <p class="small text-muted mb-3">To change password, confirm your <strong>Email or Username</strong>.</p>
-            <input type="text" v-model="verifyField" class="form-control mb-3" placeholder="Enter Email or Username">
-            <button class="btn btn-sky w-100 fw-bold" @click="checkIdentity">Continue</button>
-          </div>
-          <div v-else>
-            <label class="smallest text-muted fw-bold">NEW PASSWORD</label>
-            <input type="password" v-model="passForm.new" class="form-control mb-2" placeholder="••••••••">
-            <label class="smallest text-muted fw-bold">CONFIRM NEW PASSWORD</label>
-            <input type="password" v-model="passForm.confirm" class="form-control mb-3" placeholder="••••••••">
-            <button class="btn btn-success w-100 fw-bold" @click="confirmPasswordChange" :disabled="savingPass">
-              Update Securely
-            </button>
-          </div>
-          <div v-if="passError" class="alert alert-danger smallest py-2 mt-3">{{ passError }}</div>
-        </div>
-      </div>
+      <!-- Add in profile section right side card -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mt-4">
+    <h6 class="fw-bold mb-4">Change Password</h6>
+
+    <div class="mb-3">
+        <label class="smallest fw-bold text-muted">Current Password</label>
+        <input type="password" class="form-control"
+            v-model="passwordForm.current_password"
+            placeholder="Enter current password">
+    </div>
+    <div class="mb-3">
+        <label class="smallest fw-bold text-muted">New Password</label>
+        <input type="password" class="form-control"
+            v-model="passwordForm.new_password"
+            placeholder="Min 8 chars, alphanumeric">
+    </div>
+    <div class="mb-4">
+        <label class="smallest fw-bold text-muted">Confirm New Password</label>
+        <input type="password" class="form-control"
+            v-model="passwordForm.confirm_password"
+            placeholder="Re-enter new password">
+    </div>
+
+    <div v-if="passwordMessage"
+        :class="['alert border-0 rounded-4 small',
+            passwordMessage.type === 'success' ?
+            'alert-success' : 'alert-danger']">
+        {{ passwordMessage.text }}
+    </div>
+
+    <button class="btn btn-danger fw-bold rounded-3 px-4"
+        @click="changePassword"
+        :disabled="changingPassword">
+        <span v-if="changingPassword">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+        </span>
+        <span v-else>
+            <i class="fas fa-lock me-2"></i> Change Password
+        </span>
+    </button>
+    <button class="btn btn-link text-muted small w-100 mt-2"
+            @click="showPasswordModal = false">
+            Cancel
+        </button>
+</div>
     </div>
   </div>
   
@@ -179,9 +201,15 @@ export default {
       showPasswordModal: false,
       identityConfirmed: false,
       confirmIdentifier: '',
-      newPassword: '',
-      confirmNewPassword: '',
       authError: '',
+
+      passwordForm: {
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
+},
+changingPassword: false,
+passwordMessage: null,
     }
   },
   mounted() {
@@ -218,7 +246,106 @@ export default {
         this.showPasswordModal = false;
         this.identityConfirmed = false;
       } catch (err) { this.authError = "Update failed."; }
+    },
+    async changePassword() {
+    if (!this.passwordForm.current_password ||
+        !this.passwordForm.new_password) {
+        this.passwordMessage = {
+            type: 'error',
+            text: 'All fields are required.'
+        }
+        return
     }
+
+    if (this.passwordForm.new_password !==
+        this.passwordForm.confirm_password) {
+        this.passwordMessage = {
+            type: 'error',
+            text: 'New passwords do not match.'
+        }
+        return
+    }
+
+    if (this.passwordForm.new_password.length < 8) {
+        this.passwordMessage = {
+            type: 'error',
+            text: 'Password must be at least 8 characters.'
+        }
+        return
+    }
+
+    this.changingPassword = true
+    this.passwordMessage = null
+
+    try {
+        await api.post('/api/users/change-password/', {
+            current_password: this.passwordForm.current_password,
+            new_password: this.passwordForm.new_password
+        })
+
+        this.passwordMessage = {
+            type: 'success',
+            text: 'Password changed successfully! '
+        }
+        this.passwordForm = {
+            current_password: '',
+            new_password: '',
+            confirm_password: ''
+        }
+        setTimeout(() => {
+            this.passwordMessage = null
+        }, 3000)
+
+    } catch (err) {
+        this.passwordMessage = {
+            type: 'error',
+            text: err.response?.data?.error || 'Failed. Please try again.'
+        }
+    } finally {
+        this.changingPassword = false
+    }
+},
+logout() {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      this.$router.push('/')
+    },
+    async saveProfile() {
+      this.saving = true;
+  try {
+    const payload = {
+      name: this.user.name,
+      phone_number: this.user.phone_number,
+      blood_group: this.user.blood_group,
+      address: this.user.address
+    };
+
+    const res = await api.put('/api/users/update-profile/', payload);
+
+    // Update local state (important)
+    this.user = res.data;
+
+    alert("Profile updated successfully!");
+
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.error || "Failed to update profile.");
+  }
+}
   }
 }
 </script>
+<style>
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: whitesmoke;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+</style>

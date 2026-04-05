@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny,IsAuthenticated
 from django.utils import timezone
 from .models import DonationHistory
 from .serializers import DonationHistorySerializer
@@ -172,7 +172,7 @@ class DonorLeaderboardView(APIView):
                 'member_tag': donor.member_tag,
                 'reliability_score': donor.reliability_score,
                 'blood_group': donor.blood_group,
-                # No email, phone, address — anonymous ✅
+                # No email, phone, address — anonymous  
             })
 
         return Response(leaderboard)

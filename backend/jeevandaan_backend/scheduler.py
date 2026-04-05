@@ -54,7 +54,7 @@ def expire_attender_requests():
     from requests_app.models import AttenderRequest
     expired = AttenderRequest.objects.filter(
         status='pending',
-        expires_at__lt=timezone.now()   # expires_at is in the past
+        expires_at__lt=timezone.now()   
     )
     count = expired.count()
     expired.update(status='expired')

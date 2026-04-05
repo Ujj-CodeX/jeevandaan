@@ -9,7 +9,7 @@
             <div class="success-icon mx-auto mb-4">
               <i class="fas fa-check-circle text-success" style="font-size:4rem"></i>
             </div>
-            <h3 class="fw-bold text-success mb-2">Request Raised Successfully! ✅</h3>
+            <h3 class="fw-bold text-success mb-2">Request Raised Successfully!  </h3>
             <p class="text-muted mb-4">
               Your blood request has been submitted. Share your reference ID at the blood bank.
             </p>
@@ -123,8 +123,8 @@
                       : 'bg-danger']"
                     >
                       {{ bloodGroup }}:
-                      {{ partner.available_units > 0
-                        ? `${partner.available_units} units`
+                      {{ partner.available_units[bloodGroup] > 0
+                        ? `${partner.available_units[bloodGroup]} units`
                         : 'No stock' }}
                     </span>
 
@@ -151,6 +151,8 @@
             </div>
 
           </div>
+
+          
 
           <!-- Back to dashboard -->
           <div class="text-center mt-4">
@@ -209,6 +211,7 @@ export default {
 
                 const response = await api.get(url)
                 this.partners = Array.isArray(response.data) ? response.data : []
+                
 
             } catch (err) {
                 console.error(err)

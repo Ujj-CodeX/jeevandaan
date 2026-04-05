@@ -6,7 +6,7 @@
             <div class="small fw-bold"><i class="fa-solid fa-lock me-2"></i>ENCRYPTED DATA</div>
             <div class="small fw-bold"><i class="fa-solid fa-user-shield me-2"></i>PRIVACY-FIRST</div>
         </div>
-        <p class="text-muted small">&copy; 2024 JeevanDaan+ | National Health Portal Affiliate</p>
+        <p class="text-muted small">&copy; 2026 JeevanDaan+ | National Health Portal Affiliate</p>
     </footer>
 
 

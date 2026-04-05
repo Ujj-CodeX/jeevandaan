@@ -7,9 +7,9 @@ import bcrypt
 import jwt
 import os
 from datetime import datetime, timedelta
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from dotenv import load_dotenv
-from .google_auth import verify_google_token
+
 
 #helper function to generate JWT token
 load_dotenv()  
@@ -34,7 +34,7 @@ def generate_jwt_token(donor_id):
 #register--------------------------------------------------------------------
 
 class DonorRegisterView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     def post(self,request):
         serializer = DonorRegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -111,76 +111,7 @@ class DonorProfileView(APIView):
 
 
 
-class GoogleAuthView(APIView):
-    permission_classes = [AllowAny]
 
-    def post(self, request):
-        token = request.data.get('token')
-
-        if not token:
-            return Response(
-                {'error': 'Google token is required.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Verify token with Google
-        user_info = verify_google_token(token)
-
-        if not user_info:
-            return Response(
-                {'error': 'Invalid Google token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        email = user_info['email']
-        google_id = user_info['google_id']
-        name = user_info['name']
-
-        # Check if donor already exists
-        donor = Donor.objects.filter(email=email).first()
-
-        if donor:
-            # Existing donor — just login
-            # Update google_id if not set
-            if not donor.google_id:
-                donor.google_id = google_id
-                donor.auth_provider = 'google'
-                donor.save()
-
-            tokens = generate_jwt_token(donor.id)
-            return Response({
-                'message': 'Login successful.',
-                'tokens': tokens,
-                'donor': DonorProfileSerializer(donor).data,
-                'is_new_user': False
-            })
-
-        else:
-            # New donor — create account
-            # Auto generate username from email
-            username = email.split('@')[0]
-
-            # Make username unique if taken
-            if Donor.objects.filter(username=username).exists():
-                username = f"{username}_{google_id[:6]}"
-
-            donor = Donor.objects.create(
-                name=name,
-                email=email,
-                username=username,
-                google_id=google_id,
-                auth_provider='google',
-                password=None,          # no password for Google users
-                blood_group=None,       # will be filled in profile completion
-            )
-
-            tokens = generate_jwt_token(donor.id)
-            return Response({
-                'message': 'Account created successfully.',
-                'tokens': tokens,
-                'donor': DonorProfileSerializer(donor).data,
-                'is_new_user': True,    # ← Vue.js redirects to complete profile
-            }, status=status.HTTP_201_CREATED)
 
 class UpdateDonorLocationView(APIView):
     permission_classes = [AllowAny]
@@ -212,3 +143,272 @@ class UpdateDonorLocationView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Donor.DoesNotExist:
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+import random
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+
+        if not email:
+            return Response(
+                {'error': 'Email is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            donor = Donor.objects.get(email=email)
+
+            # Generate 6 digit OTP
+            otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+            # Store in cache or temp model
+            # For simplicity — store in a temp field
+            # Better — use Django cache
+            from django.core.cache import cache
+            cache.set(f'reset_otp_{email}', otp, timeout=600)  # 10 mins
+
+            # Send via SMS
+            from notifications.helpers import notify_donor
+            notify_donor(
+                donor=donor,
+                trigger='account_locked',
+                message=f'JeevanDaan+ Password Reset OTP: {otp}. Valid for 10 minutes.'
+            )
+
+            return Response({
+                'message': 'OTP sent to your registered phone number.'
+            })
+
+        except Donor.DoesNotExist:
+            return Response(
+                {'error': 'No account found with this email.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+        new_password = request.data.get('new_password')
+
+        if not all([email, otp, new_password]):
+            return Response(
+                {'error': 'Email, OTP and new password are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from django.core.cache import cache
+        stored_otp = cache.get(f'reset_otp_{email}')
+
+        if not stored_otp or stored_otp != otp:
+            return Response(
+                {'error': 'Invalid or expired OTP.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            donor = Donor.objects.get(email=email)
+
+            # Validate new password
+            if len(new_password) < 8:
+                return Response(
+                    {'error': 'Password must be at least 8 characters.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Hash and save
+            import bcrypt
+            donor.password = bcrypt.hashpw(
+                new_password.encode(),
+                bcrypt.gensalt()
+            ).decode()
+            donor.save()
+
+            # Clear OTP
+            cache.delete(f'reset_otp_{email}')
+
+            return Response({
+                'message': 'Password reset successfully!  '
+            })
+
+        except Donor.DoesNotExist:
+            return Response(
+                {'error': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            token = request.headers.get(
+                'Authorization', ''
+            ).replace('Bearer ', '').strip()
+            payload = jwt.decode(
+                token, os.getenv('SECRET_KEY'),
+                algorithms=['HS256']
+            )
+            donor = Donor.objects.get(id=payload['id'])
+
+            current_password = request.data.get('current_password')
+            new_password = request.data.get('new_password')
+
+            if not all([current_password, new_password]):
+                return Response(
+                    {'error': 'Both passwords required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Verify current password
+            import bcrypt
+            if not bcrypt.checkpw(
+                current_password.encode(),
+                donor.password.encode()
+            ):
+                return Response(
+                    {'error': 'Current password is incorrect.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if len(new_password) < 8:
+                return Response(
+                    {'error': 'New password must be at least 8 characters.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            donor.password = bcrypt.hashpw(
+                new_password.encode(),
+                bcrypt.gensalt()
+            ).decode()
+            donor.save()
+
+            return Response({
+                'message': 'Password changed successfully! '
+            })
+
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except jwt.InvalidTokenError:
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+class VerifyAadhaarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+        
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            donor = Donor.objects.get(id=payload['id'])
+
+            aadhaar_no = request.data.get('aadhaar_no')
+
+            
+            if not aadhaar_no:
+                return Response(
+                    {'error': 'Aadhaar number is required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            aadhaar_no = str(aadhaar_no).strip()
+
+            if not aadhaar_no.isdigit() or len(aadhaar_no) != 12:
+                return Response(
+                    {'error': 'Invalid Aadhaar number. Must be 12 digits.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            
+            if donor.is_aadhaar_verified:
+                return Response(
+                    {'error': 'Aadhaar already verified.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            
+            if Donor.objects.filter(aadhaar_number=aadhaar_no).exclude(id=donor.id).exists():
+                return Response(
+                    {'error': 'This Aadhaar is already linked with another account.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            
+            donor.aadhaar_number = aadhaar_no
+            donor.is_aadhaar_verified = False   # pending state
+            donor.save()
+
+            return Response({
+                'message': 'Aadhaar submitted. Verification is pending.'
+            })
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except Donor.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        try:
+            
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            donor = Donor.objects.get(id=payload['id'])
+
+        
+            name = request.data.get('name')
+            phone = request.data.get('phone_number')
+            blood_group = request.data.get('blood_group')
+            address = request.data.get('address')
+
+            
+            if not name:
+                return Response({'error': 'Name is required.'}, status=400)
+
+            if blood_group not in dict(Donor.BLOOD_GROUPS):
+                return Response({'error': 'Invalid blood group.'}, status=400)
+
+            # 💾 Update fields
+            donor.name = name
+            donor.phone_number = phone
+            donor.blood_group = blood_group
+            donor.address = address
+            donor.save()
+
+    
+            return Response({
+                'name': donor.name,
+                'email': donor.email,
+                'phone_number': donor.phone_number,
+                'blood_group': donor.blood_group,
+                'address': donor.address
+            })
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=401)
+
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=401)
+
+        except Donor.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)

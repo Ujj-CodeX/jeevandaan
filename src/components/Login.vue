@@ -57,17 +57,93 @@
           </p>
 
           <!-- Options -->
-          <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="rem" />
-              <label class="form-check-label text-muted small" for="rem">
-                Remember Me
-              </label>
+          <!-- Add below password input -->
+<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox"
+            id="rem" v-model="rememberMe">
+        <label class="form-check-label text-muted small" for="rem">
+            Remember Me
+        </label>
+    </div>
+    <a href="#" class="text-muted small text-decoration-none"
+        @click.prevent="showForgotModal = true">
+        Forgot Password?
+    </a>
+</div>
+
+<!-- Forgot Password Modal -->
+<div v-if="showForgotModal" class="modal-overlay"
+    @click.self="showForgotModal = false">
+    <div class="bg-white rounded-4 shadow-lg p-4"
+        style="max-width:420px;width:95%">
+
+        <h5 class="fw-bold mb-1">Reset Password</h5>
+        <p class="text-muted small mb-4">
+            Enter your email — we'll send an OTP to your registered phone.
+        </p>
+
+        <!-- Step 1 — Email -->
+        <div v-if="forgotStep === 1">
+            <div class="input-box mb-3">
+                <i class="fa-regular fa-envelope text-muted"></i>
+                <input type="email" v-model="forgotEmail"
+                    placeholder="Registered email address">
             </div>
-            <a href="#" class="text-muted small text-decoration-none">
-              Forgot Password?
-            </a>
-          </div>
+
+            <div v-if="forgotError"
+                class="alert alert-danger border-0 rounded-4 small mb-3">
+                {{ forgotError }}
+            </div>
+
+            <button class="btn btn-danger w-100 py-3 fw-bold rounded-4"
+                @click="sendForgotOTP"
+                :disabled="forgotLoading">
+                <span v-if="forgotLoading">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                </span>
+                <span v-else>Send OTP</span>
+            </button>
+        </div>
+
+        <!-- Step 2 — OTP + New Password -->
+        <div v-if="forgotStep === 2">
+            <div class="input-box mb-3">
+                <i class="fas fa-key text-muted"></i>
+                <input type="text" v-model="forgotOTP"
+                    placeholder="Enter OTP from SMS" maxlength="6">
+            </div>
+            <div class="input-box mb-3">
+                <i class="fas fa-lock text-muted"></i>
+                <input type="password" v-model="forgotNewPassword"
+                    placeholder="New Password">
+            </div>
+
+            <div v-if="forgotError"
+                class="alert alert-danger border-0 rounded-4 small mb-3">
+                {{ forgotError }}
+            </div>
+            <div v-if="forgotSuccess"
+                class="alert alert-success border-0 rounded-4 small mb-3">
+                {{ forgotSuccess }}
+            </div>
+
+            <button class="btn btn-danger w-100 py-3 fw-bold rounded-4"
+                @click="resetPassword"
+                :disabled="forgotLoading">
+                <span v-if="forgotLoading">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                </span>
+                <span v-else>Reset Password</span>
+            </button>
+        </div>
+
+        <button class="btn btn-link text-muted small w-100 mt-2"
+            @click="showForgotModal = false">
+            Cancel
+        </button>
+    </div>
+</div>
 
           <!-- Buttons -->
           <div class="d-flex gap-3 align-items-center mb-4">
@@ -87,7 +163,8 @@
 </template>
 
 <script>
-import axios from "axios";
+import api from '@/api/index.js';
+
 
 export default {
   name: "Login",
@@ -98,6 +175,14 @@ export default {
       password: "",
       loading: false,
       error: "",
+      showForgotModal: false,
+forgotStep: 1,
+forgotEmail: '',
+forgotOTP: '',
+forgotNewPassword: '',
+forgotLoading: false,
+forgotError: null,
+forgotSuccess: null,
     };
   },
 
@@ -107,7 +192,7 @@ export default {
       this.error = "";
 
       try {
-        const response = await axios.post(
+        const response = await api.post(
           "http://127.0.0.1:8000/api/users/login/",
           {
             username: this.username,
@@ -133,6 +218,54 @@ export default {
         this.loading = false;
       }
     },
+    async sendForgotOTP() {
+    if (!this.forgotEmail) {
+        this.forgotError = 'Email is required.'
+        return
+    }
+    this.forgotLoading = true
+    this.forgotError = null
+
+    try {
+        await api.post('/api/users/forgot-password/', {
+            email: this.forgotEmail
+        })
+        this.forgotStep = 2
+    } catch (err) {
+        this.forgotError = err.response?.data?.error ||
+            'Failed. Please try again.'
+    } finally {
+        this.forgotLoading = false
+    }
+},
+
+async resetPassword() {
+    if (!this.forgotOTP || !this.forgotNewPassword) {
+        this.forgotError = 'OTP and new password are required.'
+        return
+    }
+
+    this.forgotLoading = true
+    this.forgotError = null
+
+    try {
+        await api.post('/api/users/reset-password/', {
+            email: this.forgotEmail,
+            otp: this.forgotOTP,
+            new_password: this.forgotNewPassword
+        })
+        this.forgotSuccess = 'Password reset! Please login.  '
+        setTimeout(() => {
+            this.showForgotModal = false
+            this.forgotStep = 1
+        }, 2000)
+    } catch (err) {
+        this.forgotError = err.response?.data?.error ||
+            'Reset failed. Please try again.'
+    } finally {
+        this.forgotLoading = false
+    }
+},
 
     
   },
@@ -148,6 +281,18 @@ export default {
 </script>
 
 <style>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: whitesmoke;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
 :root {
   --primary-red: #d32f2f;
 }

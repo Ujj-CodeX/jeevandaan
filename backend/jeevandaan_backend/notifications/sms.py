@@ -28,7 +28,7 @@ def send_sms(phone_number, message):
             to=phone_number
         )
 
-        print(f"SMS sent successfully to {phone_number} ✅ SID: {msg.sid}")
+        print(f"SMS sent successfully to {phone_number}   SID: {msg.sid}")
         return True
 
     except Exception as e:
@@ -52,7 +52,7 @@ def send_whatsapp(phone_number, message):
             to=f'whatsapp:{phone_number}'
         )
 
-        print(f"WhatsApp sent ✅ SID: {msg.sid}")
+        print(f"WhatsApp sent   SID: {msg.sid}")
         return True
 
     except Exception as e:

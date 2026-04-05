@@ -17,6 +17,7 @@ import jwt
 import os
 from notifications.helpers import notify_nearby_donors
 from users.location import get_nearby_partners, get_nearby_donors
+from .models import AttenderRating, DonorRating
 
 
 # ── helper — decode token ────────────────────────────
@@ -143,7 +144,7 @@ class PartnerDonorRequestCreateView(APIView):
                     expires_at=expires_at
                 )
 
-                # Auto notify nearby donors! ✅
+                # Auto notify nearby donors!  
                 notify_nearby_donors(
                     blood_group=req.blood_group,
                     partner_lat=partner.latitude,
@@ -329,7 +330,7 @@ class DonorAcceptRequestView(APIView):
                 code=OTPCode.generate_code()
             )
 
-            # ✅ Create notification for partner
+            #   Create notification for partner
             from notifications.models import Notification
             Notification.objects.create(
                 partner=req.partner,
@@ -436,7 +437,7 @@ class FulfillAttenderRequestView(APIView):
             req.save()
 
             return Response({
-                'message': 'Request fulfilled successfully! ✅',
+                'message': 'Request fulfilled successfully!  ',
                 'reference_id': str(req.reference_id)
             })
 
@@ -519,7 +520,7 @@ class VerifyOTPView(APIView):
             otp.save()
 
             return Response({
-                'message': 'OTP verified successfully! ✅',
+                'message': 'OTP verified successfully!  ',
                 'request_id': otp.request.id,
                 'blood_group': otp.request.blood_group,
                 'quantity': otp.request.quantity,
@@ -632,7 +633,7 @@ class SubmitAttenderRatingView(APIView):
                     rating.partner.save()
 
             return Response({
-                'message': 'Rating submitted successfully! ✅',
+                'message': 'Rating submitted successfully!  ',
                 'stars': stars
             }, status=status.HTTP_201_CREATED)
 
@@ -648,60 +649,148 @@ class SubmitAttenderRatingView(APIView):
 
 
 class SubmitDonorRatingView(APIView):
-    """Partner rates donor after OTP verified"""
+    """Donor rates partner after donation fulfilled"""
 
     def post(self, request, request_id):
         try:
             payload = decode_token(request)
-            if payload.get('type') != 'partner':
+
+            # Only DONOR can rate  
+            if payload.get('type') != 'donor':
                 return Response(
-                    {'error': 'Only partners can rate donors.'},
+                    {'error': 'Only donors can submit ratings.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            partner = Partners.objects.get(id=payload['id'])
+            donor = Donor.objects.get(id=payload['id'])
+
+            # Find the request assigned to THIS donor
             req = PartnerDonorRequest.objects.get(
                 id=request_id,
-                partner=partner,
-                status='fulfilled'
+                assigned_donor=donor,      # ← must be assigned to this donor
+                status='fulfilled'         # ← only after fulfilled
             )
 
             # Check not already rated
             if DonorRating.objects.filter(request=req).exists():
                 return Response(
-                    {'error': 'Already rated this donor.'},
+                    {'error': 'You have already rated this request.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             stars = int(request.data.get('stars', 5))
             review = request.data.get('review', '')
 
+            if stars not in range(1, 6):
+                return Response(
+                    {'error': 'Stars must be between 1 and 5.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Donor rates the PARTNER
             DonorRating.objects.create(
-                partner=partner,
-                donor=req.assigned_donor,
+                partner=req.partner,       # ← partner being rated
+                donor=donor,               # ← donor who is rating
                 request=req,
                 stars=stars,
                 review=review
             )
 
-            # Update donor reliability score based on rating
-            donor = req.assigned_donor
+            # Update partner reliability based on rating
+            partner = req.partner
             if stars >= 4:
-                donor.reliability_score = min(100, donor.reliability_score + 5)
+                # Good rating → partner score up
+                partner.convenience_fee = partner.convenience_fee  # no change
             elif stars <= 2:
-                donor.reliability_score = max(0, donor.reliability_score - 5)
-            donor.save()
+                # Bad rating → check complaints
+                bad_ratings = DonorRating.objects.filter(
+                    partner=partner,
+                    stars__lte=2
+                ).count()
+
+                if bad_ratings >= 5:
+                    partner.is_live = False  # ← suspend after 5 bad ratings
+                    partner.save()
 
             return Response({
-                'message': 'Donor rated successfully! ✅'
+                'message': 'Rating submitted successfully! Thank you 🙏'
             }, status=status.HTTP_201_CREATED)
 
         except PartnerDonorRequest.DoesNotExist:
             return Response(
-                {'error': 'Fulfilled request not found.'},
+                {'error': 'Fulfilled request not found or not assigned to you.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Donor.DoesNotExist:
+            return Response(
+                {'error': 'Donor not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+class MyAttenderRequestsView(APIView):
+    """Donor sees their own raised requests"""
+
+    def get(self, request):
+        try:
+            payload = decode_token(request)
+            if payload.get('type') != 'donor':
+                return Response(
+                    {'error': 'Only donors can access this.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            donor = Donor.objects.get(id=payload['id'])
+
+            requests = AttenderRequest.objects.filter(
+                attender=donor
+            ).order_by('-created_at')
+
+            data = []
+            for req in requests:
+                # Check if already rated
+                is_rated = AttenderRating.objects.filter(
+                    request=req
+                ).exists()
+
+                data.append({
+                    'reference_id': str(req.reference_id),
+                    'patient_name': req.patient_name,
+                    'blood_group': req.blood_group,
+                    'quantity': req.quantity,
+                    'urgency': req.urgency,
+                    'hospital_name': req.hospital_name,
+                    'city': req.city,
+                    'status': req.status,
+                    'is_rated': is_rated,
+                    'expires_at': req.expires_at,
+                    'created_at': req.created_at,
+                    'updated_at': req.updated_at,
+                })
+
+            return Response(data)
+
+        except Donor.DoesNotExist:
+            return Response(
+                {'error': 'Donor not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except jwt.InvalidTokenError:
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )

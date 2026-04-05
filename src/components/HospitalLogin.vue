@@ -50,7 +50,7 @@
 
                     <p class="text-center mt-3 text-muted small">
                         Facility not on-boarded?
-                        <router-link to="/partners/register" class="text-primary fw-bold text-decoration-none">
+                        <router-link to="/partnersreg" class="text-primary fw-bold text-decoration-none">
                             Apply Now
                         </router-link>
                     </p>

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Partners,DonationCamp, CampEnrollment
 from .serializers import (
     PartnerRegisterSerializer,
@@ -46,7 +46,7 @@ def generate_partner_token(partner_id):
 
 
 class NearbyPartnersView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         lat = request.query_params.get('lat')
@@ -216,7 +216,7 @@ class PartnerPublicListView(APIView):
         return Response(serializer.data)
     
 class PartnerProfileView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         auth_header = request.headers.get('Authorization', '')
@@ -300,7 +300,7 @@ class UpdatePartnerLocationView(APIView):
             partner.longitude = lng
             partner.save()
 
-            return Response({'message': 'Location updated ✅'})
+            return Response({'message': 'Location updated  '})
 
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -342,7 +342,7 @@ class CreateCampView(APIView):
                 )
 
                 return Response({
-                    'message': 'Camp created successfully! ✅',
+                    'message': 'Camp created successfully!  ',
                     'camp': DonationCampSerializer(camp).data
                 }, status=status.HTTP_201_CREATED)
 
@@ -383,7 +383,7 @@ class ScheduleAndNotifyCampView(APIView):
             total_notified = notify_camp_donors(camp)
 
             return Response({
-                'message': f'Camp scheduled! {total_notified} donors notified ✅',
+                'message': f'Camp scheduled! {total_notified} donors notified  ',
                 'notified_count': total_notified,
                 'camp': DonationCampSerializer(camp).data
             })
@@ -659,6 +659,213 @@ class DownloadCampEnrollmentsView(APIView):
                 {'error': 'Camp not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# Inter Partner Request Handling
+
+
+class RaiseInterPartnerRequestView(APIView):
+    """Bank A requests Bank B for stock"""
+
+    def post(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+            if payload.get('type') != 'partner':
+                return Response(
+                    {'error': 'Only partners can raise inter-partner requests.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            requesting_partner = Partners.objects.get(id=payload['id'])
+
+            blood_group = request.data.get('blood_group')
+            quantity = request.data.get('quantity')
+            attender_request_id = request.data.get('attender_request_id')
+
+            if not all([blood_group, quantity, attender_request_id]):
+                return Response(
+                    {'error': 'blood_group, quantity and attender_request_id required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Find nearest partner with stock
+            from users.location import get_nearby_partners
+            from stock.models import Stock
+            from requests_app.models import AttenderRequest
+
+            try:
+               attender_request = AttenderRequest.objects.get(
+               reference_id=attender_request_id,
+              )
+            except AttenderRequest.DoesNotExist:
+               return Response(
+           {'error': 'Invalid attender_request_id.'},
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+            if attender_request.status == 'fulfilled':
+               return Response(
+            {'error': 'Request already fulfilled.'},
+        status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Partners with required stock
+            partners_with_stock = Partners.objects.filter(
+                is_live=True,
+                is_verified=True,
+                stock__blood_group=blood_group,
+                stock__quantity__gte=quantity
+            ).exclude(id=requesting_partner.id)
+
+            if not partners_with_stock.exists():
+                return Response(
+                    {'error': 'No nearby partners have required stock.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Find nearest
+            nearby = get_nearby_partners(
+                requesting_partner.latitude,
+                requesting_partner.longitude,
+                partners_with_stock,
+                radius_km=20
+            )
+
+            if not nearby:
+                return Response(
+                    {'error': 'No partners found within 20km with required stock.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Pick nearest partner
+            fulfilling_partner = nearby[0]['partner']
+
+            from requests_app.models import AttenderRequest, InterPartnerRequest
+            attender_req = AttenderRequest.objects.get(
+                reference_id=attender_request_id
+            )
+
+            inter_req = InterPartnerRequest.objects.create(
+                requesting_partner=requesting_partner,
+                fulfilling_partner=fulfilling_partner,
+                attender_request=attender_req,
+                blood_group=blood_group,
+                quantity=quantity,
+                convenience_fee=fulfilling_partner.convenience_fee
+            )
+
+            # Notify fulfilling partner
+            from notifications.models import Notification
+            Notification.objects.create(
+                partner=fulfilling_partner,
+                notification_type='sms',
+                trigger='donor_request',
+                message=(
+                    f"Inter-partner blood request from "
+                    f"{requesting_partner.hospital_name}! "
+                    f"Need {quantity} units of {blood_group}. "
+                    f"Convenience fee: ₹{fulfilling_partner.convenience_fee}"
+                ),
+                status='pending'
+            )
+
+            return Response({
+                'message': f'Request sent to {fulfilling_partner.hospital_name}!  ',
+                'fulfilling_partner': PartnerPublicSerializer(fulfilling_partner).data,
+                'distance_km': nearby[0]['distance_km'],
+                'convenience_fee': str(fulfilling_partner.convenience_fee),
+                'inter_request_id': inter_req.id
+            }, status=status.HTTP_201_CREATED)
+
+        except Partners.DoesNotExist:
+            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class InterPartnerRequestListView(APIView):
+    """Partner sees incoming inter-partner requests"""
+
+    def get(self, request):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = Partners.objects.get(id=payload['id'])
+
+            from requests_app.models import InterPartnerRequest
+            incoming = InterPartnerRequest.objects.filter(
+                fulfilling_partner=partner,
+                status='pending'
+            ).select_related('requesting_partner', 'attender_request')
+
+            data = []
+            for req in incoming:
+                data.append({
+                    'id': req.id,
+                    'requesting_partner': req.requesting_partner.hospital_name,
+                    'blood_group': req.blood_group,
+                    'quantity': req.quantity,
+                    'convenience_fee': str(req.convenience_fee),
+                    'status': req.status,
+                    'created_at': req.created_at
+                })
+
+            return Response(data)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class AcceptInterPartnerRequestView(APIView):
+    """Fulfilling partner accepts and marks fulfilled"""
+
+    def post(self, request, inter_request_id):
+        try:
+            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = Partners.objects.get(id=payload['id'])
+
+            from requests_app.models import InterPartnerRequest
+            inter_req = InterPartnerRequest.objects.get(
+                id=inter_request_id,
+                fulfilling_partner=partner,
+                status='pending'
+            )
+
+            inter_req.status = 'fulfilled'
+            inter_req.save()
+
+            # Update attender request as fulfilled
+            inter_req.attender_request.status = 'fulfilled'
+            inter_req.attender_request.save()
+
+            # Update stock
+            from stock.models import Stock
+            stock = Stock.objects.filter(
+                partner=partner,
+                blood_group=inter_req.blood_group
+            ).first()
+
+            if stock:
+                stock.quantity = max(0, stock.quantity - inter_req.quantity)
+                stock.save()
+
+            return Response({
+                'message': 'Inter-partner request fulfilled!  '
+            })
+
+        except InterPartnerRequest.DoesNotExist:
+            return Response({'error': 'Request not found.'}, status=status.HTTP_404_NOT_FOUND)
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:

@@ -1,20 +1,11 @@
 from flask.cli import load_dotenv
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from .models import Stock
-from .serializers import StockSerializer
-import jwt
-import os
-load_dotenv()
 
 # ── Partner updates their stock ───────────────────────
 from dotenv import load_dotenv
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Stock
 from .serializers import StockSerializer
 import jwt
@@ -24,7 +15,7 @@ load_dotenv()
 
 
 class StockUpdateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()

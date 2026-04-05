@@ -265,7 +265,7 @@
                     <div class="p-3 rounded-4" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
                       <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
-                          <span class="badge bg-success me-2">Donor Accepted ✅</span>
+                          <span class="badge bg-success me-2">Donor Accepted  </span>
                           <small class="fw-bold">{{ req.blood_group }} — {{ req.quantity }} units</small>
                         </div>
                         <small class="text-muted">{{ timeAgo(req.created_at) }}</small>
@@ -444,7 +444,7 @@
               <div class="d-flex align-items-center gap-3 mb-3">
                 <i class="fas fa-check-circle text-success fa-2x"></i>
                 <div>
-                  <h6 class="fw-bold mb-0 text-success">OTP Verified Successfully! ✅</h6>
+                  <h6 class="fw-bold mb-0 text-success">OTP Verified Successfully!  </h6>
                   <small class="text-muted">Donor identity confirmed</small>
                 </div>
               </div>
@@ -477,7 +477,7 @@
                     <td class="small text-muted">{{ timeAgo(donation.donated_at) }}</td>
                     <td>
                       <span :class="['badge rounded-pill', donation.is_verified_by_bank ? 'bg-success' : 'bg-warning text-dark']">
-                        {{ donation.is_verified_by_bank ? 'Verified ✅' : 'Pending' }}
+                        {{ donation.is_verified_by_bank ? 'Verified  ' : 'Pending' }}
                       </span>
                     </td>
                   </tr>
@@ -636,13 +636,170 @@
                         <!-- Completed badge -->
                         <span v-if="camp.stock_updated_after_camp"
                             class="badge bg-success rounded-3 p-2 flex-grow-1 text-center">
-                            ✅ Completed
+                              Completed
                         </span>
                     </div>
                 </div>
             </div>
         </div>
     
+</section>
+<section v-if="activeTab === 'inter-partner'" class="animate-fade">
+    <div class="row g-4">
+
+        <!-- LEFT — Raise Request -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-1">Raise Partner Request</h5>
+                <p class="text-muted small mb-4">
+                    Request blood stock from nearest verified partner bank.
+                </p>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Blood Group *</label>
+                    <select class="form-select border-0 bg-light py-3"
+                        v-model="interForm.blood_group">
+                        <option disabled value="">Select Blood Group</option>
+                        <option v-for="(_, g) in stock" :key="g">{{ g }}</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Units Needed *</label>
+                    <input type="number"
+                        class="form-control border-0 bg-light py-3"
+                        v-model.number="interForm.quantity"
+                        placeholder="0" min="1">
+                </div>
+
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted">Attender Reference ID *</label>
+                    <input type="text"
+                        class="form-control border-0 bg-light py-3"
+                        v-model="interForm.attender_request_id"
+                        placeholder="Enter reference ID">
+                    <small class="text-muted">
+                        Link this to an existing attender request
+                    </small>
+                </div>
+
+                <!-- Result -->
+                <div v-if="interResult" class="p-3 bg-success-subtle rounded-4 mb-3">
+                    <p class="fw-bold text-success mb-1">
+                          Request sent to {{ interResult.fulfilling_partner?.hospital_name }}
+                    </p>
+                    <small class="text-muted d-block">
+                        Distance: {{ interResult.distance_km }} km away
+                    </small>
+                    <small class="text-muted d-block">
+                        Convenience Fee: ₹{{ interResult.convenience_fee }}
+                    </small>
+                </div>
+
+                <!-- Error -->
+                <div v-if="interError" class="alert alert-danger border-0 rounded-4 mb-3 small">
+                    {{ interError }}
+                </div>
+
+                <button
+                    class="btn btn-sky w-100 py-3 fw-bold rounded-3"
+                    @click="raiseInterPartnerRequest"
+                    :disabled="interLoading || !interForm.blood_group || !interForm.quantity"
+                >
+                    <span v-if="interLoading">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Finding nearest partner...
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Send Request to Nearest Partner
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT — Incoming Requests -->
+        <div class="col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">
+                    Incoming Partner Requests
+                    <span v-if="incomingInterRequests.length > 0"
+                        class="badge bg-danger ms-2">
+                        {{ incomingInterRequests.length }}
+                    </span>
+                </h5>
+                <button class="btn btn-sky-outline btn-sm rounded-pill px-3"
+                    @click="fetchIncomingInterRequests">
+                    <i class="fas fa-sync me-1"></i> Refresh
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="interRequestsLoading" class="text-center py-4">
+                <div class="spinner-border text-sky"></div>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="incomingInterRequests.length === 0"
+                class="card border-0 shadow-sm rounded-4 p-5 text-center">
+                <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
+                <h6 class="fw-bold">No Incoming Requests</h6>
+                <p class="text-muted small">
+                    When nearby partners need blood stock, requests will appear here.
+                </p>
+            </div>
+
+            <!-- Request cards -->
+            <div v-else class="d-flex flex-column gap-3">
+                <div v-for="req in incomingInterRequests" :key="req.id"
+                    class="card border-0 shadow-sm rounded-4 p-4">
+
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">
+                                <i class="fas fa-hospital text-sky me-2"></i>
+                                {{ req.requesting_partner }}
+                            </h6>
+                            <small class="text-muted">
+                                Needs
+                                <strong class="text-danger">{{ req.blood_group }}</strong>
+                                — {{ req.quantity }} units
+                            </small>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill">
+                            Pending
+                        </span>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-4 mb-3">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Convenience Fee</span>
+                            <strong class="text-success">₹{{ req.convenience_fee }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between small mt-1">
+                            <span class="text-muted">Requested</span>
+                            <strong>{{ timeAgo(req.created_at) }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button
+                            class="btn btn-sky fw-bold flex-grow-1 rounded-3"
+                            @click="acceptInterRequest(req.id)"
+                            :disabled="acceptingInterReq === req.id"
+                        >
+                            <span v-if="acceptingInterReq === req.id">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            </span>
+                            <span v-else>
+                                <i class="fas fa-check me-2"></i> Accept & Fulfill
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 
 
@@ -813,14 +970,14 @@
                 <div :class="['p-3 rounded-4 mb-3', partner.is_verified ? 'bg-success-subtle' : 'bg-warning-subtle']">
                   <i :class="['fa-2x mb-2', partner.is_verified ? 'fas fa-file-contract text-success' : 'fas fa-clock text-warning']"></i>
                   <p class="mb-0 fw-bold small" :class="partner.is_verified ? 'text-success' : 'text-warning'">{{ partner.license_id }}</p>
-                  <small :class="partner.is_verified ? 'text-success' : 'text-warning'">{{ partner.is_verified ? 'Verified & Active ✅' : 'Pending Verification ⏳' }}</small>
+                  <small :class="partner.is_verified ? 'text-success' : 'text-warning'">{{ partner.is_verified ? 'Verified & Active  ' : 'Pending Verification ⏳' }}</small>
                 </div>
                 <div class="p-3 bg-light rounded-4 text-start small">
                   <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Partner Type</span><strong>{{ partner.partner_type }}</strong></div>
                   <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Email</span><strong>{{ partner.email }}</strong></div>
                   <div class="d-flex justify-content-between py-1">
                     <span class="text-muted">Live Status</span>
-                    <span :class="['badge rounded-pill', partner.is_live ? 'bg-success' : 'bg-warning text-dark']">{{ partner.is_live ? 'LIVE ✅' : 'PENDING' }}</span>
+                    <span :class="['badge rounded-pill', partner.is_live ? 'bg-success' : 'bg-warning text-dark']">{{ partner.is_live ? 'LIVE  ' : 'PENDING' }}</span>
                   </div>
                 </div>
               </div>
@@ -956,7 +1113,21 @@ today: new Date().toISOString().split('T')[0],
         { id: 'camps',         label: 'Camp Schedule',   icon: 'fas fa-campground' },
         { id: 'profile',       label: 'My Facility',     icon: 'fas fa-hospital-user' },
         { id: 'logout',        label: 'Logout',          icon: 'fas fa-sign-out-alt' },
+        { id: 'inter-partner', label: 'Partner Requests', icon: 'fas fa-hospital-user' },
       ],
+
+      // Inter partner
+interForm: {
+    blood_group: '',
+    quantity: 1,
+    attender_request_id: ''
+},
+interLoading: false,
+interResult: null,
+interError: null,
+incomingInterRequests: [],
+interRequestsLoading: false,
+acceptingInterReq: null,
     }
   },
 
@@ -1005,7 +1176,7 @@ today: new Date().toISOString().split('T')[0],
         await this.fetchAttenderRequests()
         await this.fetchRecentDonations()
         await this.fetchCamps()
-        
+        await this.fetchIncomingInterRequests()  
 
         
       
@@ -1085,7 +1256,7 @@ today: new Date().toISOString().split('T')[0],
           blood_group: this.donorRequest.blood_group,
           quantity: this.donorRequest.quantity
         })
-        this.donorRequestMessage = { type: 'success', text: `Request broadcasted! Nearby ${this.donorRequest.blood_group} donors notified via SMS + WhatsApp ✅` }
+        this.donorRequestMessage = { type: 'success', text: `Request broadcasted! Nearby ${this.donorRequest.blood_group} donors notified via SMS + WhatsApp  ` }
         this.donorRequest.blood_group = ''
         this.donorRequest.quantity = 1
         await this.fetchActiveDonorRequests()
@@ -1170,7 +1341,7 @@ today: new Date().toISOString().split('T')[0],
         await api.post(`/api/requests/attender/${refId}/fulfill/`)
         this.searchResult = null
         this.searchRefId = ''
-        this.donorRequestMessage = { type: 'success', text: 'Request marked as fulfilled successfully! ✅' }
+        this.donorRequestMessage = { type: 'success', text: 'Request marked as fulfilled successfully!  ' }
         await this.fetchAttenderRequests()
         await this.buildOverviewStats()
       } catch (err) {
@@ -1198,7 +1369,7 @@ today: new Date().toISOString().split('T')[0],
       this.confirmingDonation = true
       try {
         await api.post(`/api/donations/verify/${requestId}/`)
-        this.verifySuccess = 'Donation confirmed successfully! Stock updated automatically ✅'
+        this.verifySuccess = 'Donation confirmed successfully! Stock updated automatically '
         this.otpResult = null
         this.otpCode = ''
         await this.fetchStock()
@@ -1279,7 +1450,7 @@ today: new Date().toISOString().split('T')[0],
       try {
         const response = await api.put('/api/partners/profile/', this.profileForm)
         this.partner = { ...this.partner, ...response.data }
-        this.profileMessage = { type: 'success', text: 'Profile updated successfully! ✅' }
+        this.profileMessage = { type: 'success', text: 'Profile updated successfully!  ' }
         setTimeout(() => { this.profileMessage = null }, 3000)
       } catch (err) {
         this.profileMessage = { type: 'error', text: 'Failed to save profile. Please try again.' }
@@ -1400,7 +1571,7 @@ async scheduleAndNotify(campId) {
     this.notifyingCamp = campId
     try {
         const response = await api.post(`/api/partners/camps/${campId}/notify/`)
-        alert(`✅ ${response.data.message}`)
+        alert(`  ${response.data.message}`)
         await this.fetchCamps()
     } catch (err) {
         alert('Failed to notify. Please try again.')
@@ -1438,6 +1609,63 @@ removeOTP(text) {
 
   // remove OTP patterns like "OTP: 123456" or "OTP 123456"
   return text.replace(/otp[:\s]*\d+/gi, '').trim()
+},
+
+// inter partner request
+
+// ── Raise inter partner request ──────────
+async raiseInterPartnerRequest() {
+    this.interLoading = true
+    this.interResult = null
+    this.interError = null
+
+    try {
+        const response = await api.post(
+            '/api/partners/inter-request/',
+            this.interForm
+        )
+        this.interResult = response.data
+        this.interForm = {
+            blood_group: '',
+            quantity: 1,
+            attender_request_id: ''
+        }
+        await this.fetchIncomingInterRequests()
+    } catch (err) {
+        this.interError = err.response?.data?.error ||
+            'Failed to raise request. Try again.'
+    } finally {
+        this.interLoading = false
+    }
+},
+
+// ── Fetch incoming inter requests ────────
+async fetchIncomingInterRequests() {
+    this.interRequestsLoading = true
+    try {
+        const response = await api.get('/api/partners/inter-requests/')
+        this.incomingInterRequests = Array.isArray(response.data)
+            ? response.data : []
+    } catch (err) {
+        this.incomingInterRequests = []
+    } finally {
+        this.interRequestsLoading = false
+    }
+},
+
+// ── Accept inter partner request ─────────
+async acceptInterRequest(reqId) {
+    this.acceptingInterReq = reqId
+    try {
+        await api.post(`/api/partners/inter-requests/${reqId}/accept/`)
+        alert('Request fulfilled! Stock updated  ')
+        await this.fetchIncomingInterRequests()
+        await this.fetchStock()
+    } catch (err) {
+        alert(err.response?.data?.error || 'Failed to accept.')
+    } finally {
+        this.acceptingInterReq = null
+    }
 },
 
 // ── Download CSV ─────────────────────────
