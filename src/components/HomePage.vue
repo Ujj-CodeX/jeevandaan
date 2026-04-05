@@ -528,7 +528,7 @@ getLocation() {
 async fetchNearbyBanks() {
     try {
         const response = await fetch(
-            `http://localhost:8000/api/partners/nearby/?lat=${this.userLat}&lng=${this.userLng}&radius=20`
+            `https://jeevandaan-yaal.onrender.com/api/partners/nearby/?lat=${this.userLat}&lng=${this.userLng}&radius=20`
         )
         const data = await response.json()
         this.nearbyBanks = data

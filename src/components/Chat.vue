@@ -435,7 +435,7 @@ async submitDonorRating() {
     try {
         if (this.userType === 'partner') {
             // Partner fetches from their own requests
-            const response = await api.get('/api/requests/donor-requests/')
+            const response = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/donor-requests/')
             const req = response.data.find(
                 r => r.id === parseInt(this.requestId)
             )
@@ -463,7 +463,7 @@ async submitDonorRating() {
       this.sendingMsg = message
 
       try {
-        await api.post(`/api/chat/${this.requestId}/send/`, { message })
+        await api.post(`https://jeevandaan-yaal.onrender.com/api/chat/${this.requestId}/send/`, { message })
         await this.fetchMessages()
       } catch (err) {
         const msg = err.response?.data?.error || 'Failed to send message.'
@@ -495,7 +495,7 @@ async submitDonorRating() {
 
     try {
         const response = await api.post(
-            `/api/requests/donor/${this.requestId}/cancel/`,
+            `https://jeevandaan-yaal.onrender.com/api/requests/donor/${this.requestId}/cancel/`,
             {
                 reason: this.cancelReason,
                 detail: this.cancelDetail
@@ -530,7 +530,7 @@ async submitDonorRating() {
 async fetchDonorInfo() {
     if (this.userType !== 'donor') return
     try {
-        const response = await api.get('/api/users/profile/')
+        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/users/profile/')
         this.donor = response.data
     } catch (err) {
         console.error(err)

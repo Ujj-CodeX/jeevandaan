@@ -210,7 +210,7 @@ export default {
             this.error = null
 
             try {
-                const response = await api.post('/api/partners/register/', this.form)
+                const response = await api.post('https://jeevandaan-yaal.onrender.com/api/partners/register/', this.form)
 
                 // Store tokens
                 localStorage.setItem('access_token', response.data.tokens.access)

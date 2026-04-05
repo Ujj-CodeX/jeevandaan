@@ -769,7 +769,7 @@ export default {
                 }
 
                 const response = await api.post(
-                    '/api/requests/attender/create/',
+                    'https://jeevandaan-yaal.onrender.com/api/requests/attender/create/',
                     this.form
                 )
 
