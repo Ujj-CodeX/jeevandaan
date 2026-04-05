@@ -3,7 +3,7 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "baseUrl": "https://jeevandaan-yaal.onrender.com",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
