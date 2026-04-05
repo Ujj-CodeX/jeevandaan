@@ -1,7 +1,6 @@
 
 import uuid
 from django.db import models
-from sqlalchemy import null
 from users.models import Donor
 import random
 import string
