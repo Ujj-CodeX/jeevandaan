@@ -11,7 +11,6 @@ from .serializers import (
     DonationCampSerializer, CampEnrollmentSerializer
 )
 import bcrypt
-import jwt
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -25,24 +24,14 @@ from datetime import date
 load_dotenv() 
 
 
-def generate_partner_token(partner_id):
-    access_payload = {
-        'id': partner_id,
-        'type': 'partner',
-        'exp': datetime.utcnow() + timedelta(hours=1),
-        'iat': datetime.utcnow(),
+from rest_framework_simplejwt.tokens import RefreshToken
 
+def generate_partner_token(partner):
+    refresh = RefreshToken.for_user(partner)
+    return {
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
     }
-    refresh_payload = {
-        'id': partner_id,
-        'type': 'partner',
-        'exp': datetime.utcnow() + timedelta(days=7),
-        'iat': datetime.utcnow(),
-    }
-    access = jwt.encode(access_payload, os.getenv('SECRET_KEY'), algorithm='HS256')
-    refresh = jwt.encode(refresh_payload, os.getenv('SECRET_KEY'), algorithm='HS256')
-    return {'access': access, 'refresh': refresh}
-
 
 
 class NearbyPartnersView(APIView):
