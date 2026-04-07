@@ -95,14 +95,7 @@ class NearbyDonorsView(APIView):
 
     def get(self, request):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can search donors.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            
 
             lat = request.query_params.get('lat')
             lng = request.query_params.get('lng')
@@ -219,23 +212,11 @@ class PartnerProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        auth_header = request.headers.get('Authorization', '')
-        print("AUTH HEADER:", auth_header)
-
-        token = auth_header.replace('Bearer ', '').strip()
-        print("TOKEN:", token)
-        print("SECRET:", os.getenv('SECRET_KEY'))
+        
 
         try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            print("PAYLOAD:", payload)
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Invalid token type.'},
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-            partner = Partners.objects.get(id=payload['id'])
+            
+            partner = request.user
             return Response(PartnerProfileSerializer(partner).data)
 
         except jwt.ExpiredSignatureError:
