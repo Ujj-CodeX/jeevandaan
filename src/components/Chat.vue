@@ -9,14 +9,14 @@
         </button>
         <div class="flex-grow-1">
           <h6 class="fw-bold mb-0">
-            {{ requestInfo?.partner?.hospital_name || 'Blood Bank Chat' }}
+            {{ requestInfo?.hospital_name || 'Blood Bank Chat' }}
           </h6>
           <small class="text-muted">
             <span class="badge rounded-pill me-1"
-              :class="requestInfo?.partner?.status === 'assigned' ? 'bg-success' : 'bg-warning text-dark'">
-              {{ requestInfo?.partner?.status }}
+              :class="requestInfo?.status === 'assigned' ? 'bg-success' : 'bg-warning text-dark'">
+              {{ requestInfo?.status }}
             </span>
-            {{ requestInfo?.partner?.blood_group }} — {{ requestInfo?.partner?.quantity }} units
+            {{ requestInfo?.blood_group }} — {{ requestInfo?.quantity }} units
           </small>
         </div>
         <!-- Who am I indicator -->
@@ -323,7 +323,7 @@ donorRatingError: null,
   computed: {
 
     
-    // Show messages based on who is logged in
+    
     availableMessages() {
       return this.userType === 'donor'
         ? this.donorMessages
@@ -333,28 +333,28 @@ donorRatingError: null,
 
   mounted() {
 
-    this.fetchDonorInfo()
     this.requestId = this.$route.params.id
+
     const userType = localStorage.getItem('user_type')
+    this.userType = userType === 'partner' ? 'partner' : 'donor'
+
+    // Debug logs
+    console.log('requestId:', this.requestId)
+    console.log('userType:', this.userType)
+
     
-
-if (userType === 'partner') {
-  this.userType = 'partner'
-} else {
-  this.userType = 'donor'
-}
-
-    // Get OTP
     const queryOtp = this.$route.query.otp
     const storedOtp = localStorage.getItem(`otp_${this.requestId}`)
     this.otpCode = queryOtp || storedOtp || null
 
+  
+    this.fetchDonorInfo()  
     this.fetchMessages()
     this.fetchRequestInfo()
 
-    // Poll every 8 seconds
+    // ── Step 4: Poll every 8 seconds ──────────
     this.pollInterval = setInterval(() => {
-      this.fetchMessages()
+        this.fetchMessages()
     }, 8000)
 
     
@@ -433,31 +433,36 @@ async submitDonorRating() {
 
     async fetchRequestInfo() {
     try {
+        console.log('Fetching request info as:', this.userType)
+
         if (this.userType === 'partner') {
-            // Partner fetches from their own requests
-            const response = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/donor-requests/')
-            const req = response.data.find(
-                r => r.id === parseInt(this.requestId)
-            )
-            if (req) this.requestInfo = req
-        } else {
-            // Donor fetches from open list
-            const bg = encodeURIComponent(
-                localStorage.getItem('donor_blood_group') || ''
-            )
             const response = await api.get(
-                `https://jeevandaan-yaal.onrender.com/api/requests/donor/detail/?blood_group=${bg}`
+                'https://jeevandaan-yaal.onrender.com/api/partners/donor-requests/'
             )
+            console.log('Partner requests:', response.data)
             const req = response.data.find(
                 r => r.id === parseInt(this.requestId)
             )
+            console.log('Found request:', req)
+            if (req) this.requestInfo = req
+
+        } else {
+            // Donor — fetch assigned request directly
+            const response = await api.get(
+                'https://jeevandaan-yaal.onrender.com/api/requests/donor/list/'
+            )
+            console.log('Donor requests:', response.data)
+            const req = response.data.find(
+                r => r.id === parseInt(this.requestId)
+            )
+            console.log('Found request:', req)
             if (req) this.requestInfo = req
         }
+
     } catch (err) {
-        console.error('Request info fetch failed:', err)
+        console.error('Request info fetch failed:', err.response?.data || err)
     }
 },
-
     async sendMessage(message) {
       this.sending = true
       this.sendingMsg = message
