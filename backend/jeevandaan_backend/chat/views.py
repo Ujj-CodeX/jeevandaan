@@ -18,88 +18,76 @@ def decode_token(request):
 #sendmaeesage -----------------
 
 class SendMessageView(APIView):
-    def post(self,request,request_id):
+    def post(self, request, request_id):
         try:
-            payload =  decode_token(request)
+            print("🔴 SEND MESSAGE HIT")  # ← add this first
+            payload = decode_token(request)
+            print("✅ TOKEN DECODED:", payload)  # ← add this
             
             user_id = payload.get('id')
 
             if Partners.objects.filter(id=user_id).exists():
-              sender_type = 'partner'
+                sender_type = 'partner'
             elif Donor.objects.filter(id=user_id).exists():
-              sender_type = 'donor'
+                sender_type = 'donor'
             else:
                 return Response({'error': 'Invalid user'}, status=status.HTTP_403_FORBIDDEN)
-            print("==== DEBUG SEND ====")
-            print("AUTH HEADER:", request.headers.get('Authorization'))
-            print("PAYLOAD:", payload)
-            print("SENDER TYPE:", sender_type)
+            
+            print("✅ SENDER TYPE:", sender_type)  # ← add this
 
-            
-            
             try:
                 req = PartnerDonorRequest.objects.get(id=request_id)
+                print("✅ REQUEST FOUND:", req.id, "STATUS:", req.status)  # ← add this
             except PartnerDonorRequest.DoesNotExist:
-                return Response(
-                    {'error': 'Request not found.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({'error': 'Request not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
             if req.status in ['fulfilled', 'expired', 'cancelled']:
-                return Response(
-                    {'error': 'Chat is closed for this request.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                print("❌ CHAT CLOSED")  # ← add this
+                return Response({'error': 'Chat is closed for this request.'}, status=status.HTTP_400_BAD_REQUEST)
+            
             if sender_type == 'donor':
                 donor = Donor.objects.get(id=payload['id'])
+                print("✅ DONOR:", donor, "ASSIGNED:", req.assigned_donor)  # ← add this
                 if req.assigned_donor != donor:
-                    return Response(
-                        {'error': 'You are not assigned to this request.'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+                    print("❌ DONOR NOT ASSIGNED")  # ← add this
+                    return Response({'error': 'You are not assigned to this request.'}, status=status.HTTP_403_FORBIDDEN)
+            
             elif sender_type == 'partner':
                 partner = Partners.objects.get(id=payload['id'])
+                print("✅ PARTNER:", partner, "REQ PARTNER:", req.partner)  # ← add this
                 if req.partner != partner:
-                    return Response(
-                        {'error': 'This request does not belong to you.'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-                
-            message = request.data.get('message')
-            valid_messages = [
-                'on_the_way',
-                'reached',
-                'unable_to_come',
-                'delayed',
-                'donated',
-                'waiting_for_donor',
-                'donor_arrived',
-                'please_hurry',
-                'donation_received',
-                'request_cancelled'
+                    print("❌ WRONG PARTNER")  # ← add this
+                    return Response({'error': 'This request does not belong to you.'}, status=status.HTTP_403_FORBIDDEN)
 
+            message = request.data.get('message')
+            print("✅ MESSAGE:", message)  # ← add this
+            
+            valid_messages = [
+                'on_the_way', 'reached', 'unable_to_come', 'delayed', 'donated',
+                'waiting_for_donor', 'donor_arrived', 'please_hurry',
+                'donation_received', 'request_cancelled'
             ]
             if message not in valid_messages:
-                return Response(
-                    {'error': 'Invalid message. Only default messages allowed.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                print("❌ INVALID MESSAGE:", message)  # ← add this
+                return Response({'error': 'Invalid message.'}, status=status.HTTP_400_BAD_REQUEST)
             
-            chat = Chat.objects.create(
-                request=req,
-                sender_type=sender_type,
-                message=message
-            )
+            chat = Chat.objects.create(request=req, sender_type=sender_type, message=message)
+            print("✅ CHAT CREATED:", chat.id)  # ← add this
 
             return Response({
                 'message': 'Message sent.',
                 'chat': ChatSerializer(chat).data
             }, status=status.HTTP_201_CREATED)
-        
 
         except jwt.ExpiredSignatureError:
+            print("❌ TOKEN EXPIRED")  # ← add this
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
+            print("❌ INVALID TOKEN")  # ← add this
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            print("❌ UNEXPECTED ERROR:", str(e))  # ← add this — catches anything else
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # get chat history------------------------------------------------
 
