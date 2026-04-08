@@ -9,14 +9,14 @@
         </button>
         <div class="flex-grow-1">
           <h6 class="fw-bold mb-0">
-            {{ requestInfo?.hospital_name || 'Blood Bank Chat' }}
+            {{ requestInfo?.partner?.hospital_name || 'Blood Bank Chat' }}
           </h6>
           <small class="text-muted">
             <span class="badge rounded-pill me-1"
-              :class="requestInfo?.status === 'assigned' ? 'bg-success' : 'bg-warning text-dark'">
-              {{ requestInfo?.status }}
+              :class="requestInfo?.partner?.status === 'assigned' ? 'bg-success' : 'bg-warning text-dark'">
+              {{ requestInfo?.partner?.status }}
             </span>
-            {{ requestInfo?.blood_group }} — {{ requestInfo?.quantity }} units
+            {{ requestInfo?.partner?.blood_group }} — {{ requestInfo?.partner?.quantity }} units
           </small>
         </div>
         <!-- Who am I indicator -->
@@ -178,7 +178,7 @@
               </small>
               <div :class="['chat-bubble px-3 py-2 rounded-4 shadow-sm',
                 isMyMessage(msg) ? 'bubble-mine' : 'bubble-theirs']">
-                <p class="mb-0 fw-bold small">{{ formatMessage(msg.message_display) }}</p>
+                <p class="mb-0 fw-bold small">{{ formatMessage(msg.message) }}</p>
                 <small class="opacity-75 smallest">{{ timeAgo(msg.sent_at) }}</small>
               </div>
             </div>
