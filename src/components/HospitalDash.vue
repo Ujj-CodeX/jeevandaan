@@ -1164,11 +1164,8 @@ acceptingInterReq: null,
       this.loading = true
       this.error = null
       try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/profile/', {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  })
+        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/profile/', 
+  )
        
         this.partner = response.data
 
