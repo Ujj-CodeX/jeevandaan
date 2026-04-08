@@ -92,10 +92,21 @@ class SendMessageView(APIView):
 # get chat history------------------------------------------------
 
 class ChatHistoryView(APIView):
-    def get(self,request , request_id):
+    def get(self, request, request_id):
         try:
             payload = decode_token(request)
-            sender_type = payload.get('type')
+
+           
+            user_id = payload.get('id')
+            if Partners.objects.filter(id=user_id).exists():
+                sender_type = 'partner'
+            elif Donor.objects.filter(id=user_id).exists():
+                sender_type = 'donor'
+            else:
+                return Response(
+                    {'error': 'Invalid user'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
             try:
                 req = PartnerDonorRequest.objects.get(id=request_id)
@@ -104,39 +115,44 @@ class ChatHistoryView(APIView):
                     {'error': 'Request not found.'},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            # Make sure this check allows both donor and partner
-            if sender_type not in ['donor', 'partner']:
-                return Response(
-                {'error': 'Unauthorized.'},
-                 status=status.HTTP_403_FORBIDDEN
-                  )
 
-# Verify sender belongs to this request
+            
             if sender_type == 'donor':
-                donor = Donor.objects.get(id=payload['id'])
+                donor = Donor.objects.get(id=user_id)
                 if req.assigned_donor != donor:
-                  return Response(
-            {'error': 'You are not assigned to this request.'},
-            status=status.HTTP_403_FORBIDDEN
-                               )
-            elif sender_type == 'partner':
-              partner = Partners.objects.get(id=payload['id'])
-              if req.partner != partner:
-                   return Response(
-                    {'error': 'This request does not belong to you.'},
+                    return Response(
+                        {'error': 'You are not assigned to this request.'},
                         status=status.HTTP_403_FORBIDDEN
-                   )
+                    )
+            elif sender_type == 'partner':
+                partner = Partners.objects.get(id=user_id)
+                if req.partner != partner:
+                    return Response(
+                        {'error': 'This request does not belong to you.'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+
             chats = Chat.objects.filter(request=req).order_by('sent_at')
-            return Response(ChatSerializer(chats, many=True).data)
+            return Response(
+                ChatSerializer(chats, many=True).data,
+                status=status.HTTP_200_OK  
+            )
+
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {'error': 'Token expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-                
-            
-
-            
-            
-
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            print(" CHAT HISTORY ERROR:", str(e))  # shows in Render logs
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 

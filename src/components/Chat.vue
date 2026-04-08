@@ -378,7 +378,8 @@ donorRatingError: null,
     async fetchMessages() {
     try {
         const response = await api.get(
-            `https://jeevandaan-yaal.onrender.com/api/chat/${this.requestId}/history/`
+            `https://jeevandaan-yaal.onrender.com/api/chat/${this.requestId}/history/`,
+            { params: { _t: Date.now() } }
         )
         this.messages = Array.isArray(response.data) ? response.data : []
 
