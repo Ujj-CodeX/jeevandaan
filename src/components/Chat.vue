@@ -378,7 +378,7 @@ if (userType === 'partner') {
     async fetchMessages() {
     try {
         const response = await api.get(
-            `/api/chat/${this.requestId}/history/`
+            `https://jeevandaan-yaal.onrender.com/api/chat/${this.requestId}/history/`
         )
         this.messages = Array.isArray(response.data) ? response.data : []
 
@@ -418,7 +418,7 @@ async submitDonorRating() {
 
     try {
         await api.post(
-            `/api/requests/donor/${this.requestId}/rate/`,
+            `https://jeevandaan-yaal.onrender.com/api/requests/donor/${this.requestId}/rate/`,
             this.donorRatingForm
         )
         this.showDonorRating = false
@@ -446,7 +446,7 @@ async submitDonorRating() {
                 localStorage.getItem('donor_blood_group') || ''
             )
             const response = await api.get(
-                `/api/requests/donor/detail/?blood_group=${bg}`
+                `https://jeevandaan-yaal.onrender.com/api/requests/donor/detail/?blood_group=${bg}`
             )
             const req = response.data.find(
                 r => r.id === parseInt(this.requestId)
