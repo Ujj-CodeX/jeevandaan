@@ -438,7 +438,7 @@ async submitDonorRating() {
 
         if (this.userType === 'partner') {
             const response = await api.get(
-                'https://jeevandaan-yaal.onrender.com/api/partners/donor-requests/'
+                'https://jeevandaan-yaal.onrender.com/api/requests/donor-requests/'
             )
             console.log('Partner requests:', response.data)
             const req = response.data.find(
