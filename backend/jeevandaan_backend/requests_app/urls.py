@@ -4,6 +4,7 @@ from .views import (
     AttenderRequestListView,
     AttenderRequestDetailView,
     DonorPartnerRequestListView,
+    DonorRequestDetailView,
     PartnerDonorRequestCreateView,
     PartnerDonorRequestListView,
     DonorAcceptRequestView,
@@ -36,4 +37,5 @@ urlpatterns = [
     path('attender/<uuid:reference_id>/rate/', SubmitAttenderRatingView.as_view()),
     path('donor/<int:request_id>/rate/', SubmitDonorRatingView.as_view()),
     path('attender/my-requests/', MyAttenderRequestsView.as_view()),
+    path('donor/<int:request_id>/detail/', DonorRequestDetailView.as_view()),
 ]

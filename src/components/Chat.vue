@@ -50,8 +50,7 @@
     <div class="flex-grow-1 container py-3 chat-scroll" ref="chatContainer">
 
       <!-- Cancel section — donor only -->
-<div v-if="userType === 'donor' && requestInfo?.status === 'assigned'"
-    class="bg-white border-top p-3">
+<div v-if="userType === 'donor'  " class="bg-white border-top p-3">
     <div class="container">
         <button
             class="btn btn-outline-secondary btn-sm rounded-pill w-100"
@@ -454,14 +453,11 @@ async submitDonorRating() {
         } else {
             // Donor — fetch assigned request directly
             const response = await api.get(
-                'https://jeevandaan-yaal.onrender.com/api/requests/donor/list/'
+                `https://jeevandaan-yaal.onrender.com/api/requests/donor/${this.requestId}/detail/`
             )
-            console.log('Donor requests:', response.data)
-            const req = response.data.find(
-                r => r.id === parseInt(this.requestId)
-            )
-            console.log('Found request:', req)
-            if (req) this.requestInfo = req
+            this.requestInfo = response.data
+            console.log('requestInfo:', this.requestInfo)
+            
         }
 
     } catch (err) {

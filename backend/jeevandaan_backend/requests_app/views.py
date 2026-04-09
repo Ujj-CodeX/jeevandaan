@@ -18,7 +18,6 @@ import os
 from notifications.helpers import notify_nearby_donors
 from users.location import get_nearby_partners, get_nearby_donors
 from .models import AttenderRating, DonorRating
-from django.db.models import Q
 
 
 # ── helper — decode token ────────────────────────────
@@ -178,8 +177,6 @@ class PartnerDonorRequestListView(APIView):
     FALLBACK_RADIUS_KM = 50    
 
     def get(self, request):
-        payload = decode_token(request)  
-        user_type = payload.get('type')
         donor_lat   = request.query_params.get('lat')
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
@@ -189,18 +186,9 @@ class PartnerDonorRequestListView(APIView):
         print("donor_lon:", donor_lon)
         print("blood_group:", blood_group)
 
-        if user_type == 'donor':
-            donor = Donor.objects.get(id=payload['id'])
-            open_requests = PartnerDonorRequest.objects.filter(
-        Q(status='open') | Q(assigned_donor=donor)
-    )
-        else:
-         
-            partner = Partners.objects.get(id=payload['id'])
-            open_requests = PartnerDonorRequest.objects.filter(
-        partner=partner,
-        status__in=['open', 'assigned']
-    )
+        open_requests = PartnerDonorRequest.objects.filter(
+    status='open'  # ← include assigned
+).select_related('partner').order_by('-created_at')
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
@@ -263,7 +251,7 @@ class PartnerDonorRequestListDetailView(APIView):
         print("blood_group:", blood_group)
 
         open_requests = PartnerDonorRequest.objects.filter(
-    Q(status='open') | Q(assigned_donor=donor)
+        status__in=['open', 'assigned']  # ← include assigned
 ).select_related('partner').order_by('-created_at')
 
         if blood_group:
@@ -309,6 +297,44 @@ class PartnerDonorRequestListDetailView(APIView):
         return Response(
             PartnerDonorRequestPublicSerializer(open_requests, many=True).data
         )
+
+class DonorRequestDetailView(APIView):
+    """Get single donor request by ID — for chat page"""
+    permission_classes = [AllowAny]
+
+    def get(self, request, request_id):
+        try:
+            token = request.headers.get(
+                'Authorization', ''
+            ).replace('Bearer ', '').strip()
+            payload = jwt.decode(
+                token,
+                os.getenv('SECRET_KEY'),
+                algorithms=['HS256']
+            )
+
+            req = PartnerDonorRequest.objects.select_related(
+                'partner', 'assigned_donor'
+            ).get(id=request_id)
+
+            return Response({
+                'id': req.id,
+                'hospital_name': req.partner.hospital_name,
+                'city': req.partner.city,
+                'blood_group': req.blood_group,
+                'quantity': req.quantity,
+                'status': req.status,
+                'expires_at': req.expires_at,
+                'created_at': req.created_at,
+            })
+
+        except PartnerDonorRequest.DoesNotExist:
+            return Response(
+                {'error': 'Request not found.'},
+                status=404
+            )
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 
 from .models import OTPCode
