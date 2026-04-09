@@ -524,7 +524,7 @@ async submitDonorRating() {
 
         this.showCancelModal = false
         alert(`Request cancelled. Reliability score deducted by 10 points.`)
-        this.$router.push('/dashboard')
+        this.$router.push('/user')
 
     } catch (err) {
         this.cancelError = err.response?.data?.error || 'Cancellation failed.'
