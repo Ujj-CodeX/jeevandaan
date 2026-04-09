@@ -18,6 +18,7 @@ import os
 from notifications.helpers import notify_nearby_donors
 from users.location import get_nearby_partners, get_nearby_donors
 from .models import AttenderRating, DonorRating
+from django.db.models import Q
 
 
 # ── helper — decode token ────────────────────────────
@@ -177,6 +178,8 @@ class PartnerDonorRequestListView(APIView):
     FALLBACK_RADIUS_KM = 50    
 
     def get(self, request):
+        payload = decode_token(request)  
+        user_type = payload.get('type')
         donor_lat   = request.query_params.get('lat')
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
@@ -186,9 +189,18 @@ class PartnerDonorRequestListView(APIView):
         print("donor_lon:", donor_lon)
         print("blood_group:", blood_group)
 
-        open_requests = PartnerDonorRequest.objects.filter(
-    status='open'  # ← include assigned
-).select_related('partner').order_by('-created_at')
+        if user_type == 'donor':
+            donor = Donor.objects.get(id=payload['id'])
+            open_requests = PartnerDonorRequest.objects.filter(
+        Q(status='open') | Q(assigned_donor=donor)
+    )
+        else:
+         
+            partner = Partners.objects.get(id=payload['id'])
+            open_requests = PartnerDonorRequest.objects.filter(
+        partner=partner,
+        status__in=['open', 'assigned']
+    )
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
@@ -251,7 +263,7 @@ class PartnerDonorRequestListDetailView(APIView):
         print("blood_group:", blood_group)
 
         open_requests = PartnerDonorRequest.objects.filter(
-        status__in=['open', 'assigned']  # ← include assigned
+    Q(status='open') | Q(assigned_donor=donor)
 ).select_related('partner').order_by('-created_at')
 
         if blood_group:
