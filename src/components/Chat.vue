@@ -63,68 +63,7 @@
 </div>
 
 <!-- Cancel Modal -->
-<div v-if="showCancelModal" class="modal-overlay" @click.self="showCancelModal = false">
-    <div class="bg-white rounded-4 shadow-lg p-4" style="max-width:440px;width:100%">
-        <h5 class="fw-bold mb-1 text-danger">Cancel Acceptance</h5>
-        <p class="text-muted small mb-4">
-            Please provide a valid reason. Your reliability score will be deducted by 10 points.
-        </p>
 
-        <!-- IPC warning if multiple cancellations -->
-        <div v-if="donor?.cancellation_count >= 2"
-            class="alert border-0 rounded-4 mb-3 p-3"
-            style="background:#fff5f5">
-            <i class="fas fa-gavel text-danger me-2"></i>
-            <strong class="text-danger small">Legal Notice</strong>
-            <p class="text-danger small mb-0 mt-1">
-                Multiple cancellations after accepting requests may invite disciplinary
-                action under IPC provisions. Your account may be suspended.
-            </p>
-        </div>
-
-        <div class="mb-3">
-            <label class="small fw-bold text-muted">Reason for cancellation *</label>
-            <select class="form-select mb-2" v-model="cancelReason">
-                <option disabled value="">Select reason</option>
-                <option value="health_issue">Health issue / Not feeling well</option>
-                <option value="emergency">Personal emergency</option>
-                <option value="transport">Transport issue</option>
-                <option value="wrong_blood_group">Wrong blood group request</option>
-                <option value="other">Other</option>
-            </select>
-            <textarea
-                class="form-control"
-                rows="3"
-                v-model="cancelDetail"
-                placeholder="Additional details (optional)"
-            ></textarea>
-        </div>
-
-        <!-- Error -->
-        <div v-if="cancelError" class="alert alert-danger border-0 rounded-4 small mb-3">
-            {{ cancelError }}
-        </div>
-
-        <div class="d-flex gap-2">
-            <button
-                class="btn btn-danger flex-grow-1 py-3 fw-bold rounded-3"
-                @click="cancelAcceptance"
-                :disabled="cancelling || !cancelReason"
-            >
-                <span v-if="cancelling">
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                </span>
-                <span v-else>Submit & Cancel</span>
-            </button>
-            <button
-                class="btn btn-light flex-grow-1 py-3 rounded-3"
-                @click="showCancelModal = false"
-            >
-                Go Back
-            </button>
-        </div>
-    </div>
-</div>
 
       <!-- Loading -->
       <div v-if="loading" class="text-center py-5">
@@ -187,6 +126,69 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showCancelModal" class="modal-overlay" @click.self="showCancelModal = false">
+    <div class="bg-white rounded-4 shadow-lg p-4" style="max-width:440px;width:100%">
+        <h5 class="fw-bold mb-1 text-danger">Cancel Acceptance</h5>
+        <p class="text-muted small mb-4">
+            Please provide a valid reason. Your reliability score will be deducted by 10 points.
+        </p>
+
+        <!-- IPC warning if multiple cancellations -->
+        <div v-if="donor?.cancellation_count >= 2"
+            class="alert border-0 rounded-4 mb-3 p-3"
+            style="background:#fff5f5">
+            <i class="fas fa-gavel text-danger me-2"></i>
+            <strong class="text-danger small">Legal Notice</strong>
+            <p class="text-danger small mb-0 mt-1">
+                Multiple cancellations after accepting requests may invite disciplinary
+                action under IPC provisions. Your account may be suspended.
+            </p>
+        </div>
+
+        <div class="mb-3">
+            <label class="small fw-bold text-muted">Reason for cancellation *</label>
+            <select class="form-select mb-2" v-model="cancelReason">
+                <option disabled value="">Select reason</option>
+                <option value="health_issue">Health issue / Not feeling well</option>
+                <option value="emergency">Personal emergency</option>
+                <option value="transport">Transport issue</option>
+                <option value="wrong_blood_group">Wrong blood group request</option>
+                <option value="other">Other</option>
+            </select>
+            <textarea
+                class="form-control"
+                rows="3"
+                v-model="cancelDetail"
+                placeholder="Additional details (optional)"
+            ></textarea>
+        </div>
+
+        <!-- Error -->
+        <div v-if="cancelError" class="alert alert-danger border-0 rounded-4 small mb-3">
+            {{ cancelError }}
+        </div>
+
+        <div class="d-flex gap-2">
+            <button
+                class="btn btn-danger flex-grow-1 py-3 fw-bold rounded-3"
+                @click="cancelAcceptance"
+                :disabled="cancelling || !cancelReason"
+            >
+                <span v-if="cancelling">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                </span>
+                <span v-else>Submit & Cancel</span>
+            </button>
+            <button
+                class="btn btn-light flex-grow-1 py-3 rounded-3"
+                @click="showCancelModal = false"
+            >
+                Go Back
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- Default message buttons — fixed at bottom -->
     <div class="bg-white border-top p-3 shadow-sm">
@@ -263,6 +265,8 @@
         </button>
     </div>
 </div>
+
+
 
   </div>
 </template>
