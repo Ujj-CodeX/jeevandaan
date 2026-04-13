@@ -9,7 +9,8 @@ import os
 from datetime import datetime, timedelta
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from dotenv import load_dotenv
-
+from config.authentication import DonorJWTAuthentication
+from config.permissions import IsDonor
 
 #helper function to generate JWT token
 load_dotenv()  
@@ -34,6 +35,7 @@ def generate_jwt_token(donor_id):
 #register--------------------------------------------------------------------
 
 class DonorRegisterView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
     def post(self,request):
         serializer = DonorRegisterSerializer(data=request.data)
@@ -46,6 +48,7 @@ class DonorRegisterView(APIView):
 
 #LOgin-----------------------------------------------------------------------
 class DonorLoginView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
     def post(self, request):
         serializer = DonorLoginSerializer(data=request.data)
@@ -79,7 +82,8 @@ class DonorLoginView(APIView):
         })
 
 class DonorProfileView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def get(self, request):
         auth_header = request.headers.get('Authorization', '')
@@ -114,7 +118,8 @@ class DonorProfileView(APIView):
 
 
 class UpdateDonorLocationView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request):
         try:
@@ -148,6 +153,7 @@ class UpdateDonorLocationView(APIView):
 import random
 
 class ForgotPasswordView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -191,6 +197,7 @@ class ForgotPasswordView(APIView):
 
 
 class ResetPasswordView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -246,7 +253,8 @@ class ResetPasswordView(APIView):
 
 
 class ChangePasswordView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request):
         try:
@@ -307,7 +315,8 @@ class ChangePasswordView(APIView):
             )
 
 class VerifyAadhaarView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request):
         try:
@@ -366,7 +375,8 @@ class VerifyAadhaarView(APIView):
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
         
 class UpdateProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def put(self, request):
         try:

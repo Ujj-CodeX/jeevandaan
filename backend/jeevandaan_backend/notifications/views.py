@@ -10,6 +10,12 @@ import jwt
 import os
 from .helpers import notify_nearby_donors
 
+from config.authentication import PartnerJWTAuthentication
+from config.permissions import IsPartner
+
+from config.authentication import AnyJWTAuthentication
+from config.permissions import IsAuthenticated  
+
 
 
 # ── helper ───────────────────────────────────────────
@@ -65,6 +71,8 @@ class DonorNotificationListView(APIView):
 # ════════════════════════════════════════════════════
 
 class PartnerNotificationListView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request):
         try:
@@ -137,6 +145,8 @@ class NotifyNearbyDonorsView(APIView):
         except jwt.InvalidTokenError:
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 class MarkNotificationReadView(APIView):
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, notification_id):
         try:

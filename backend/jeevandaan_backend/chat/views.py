@@ -9,6 +9,9 @@ from partners.models import Partners
 import jwt
 import os
 
+from config.authentication import AnyJWTAuthentication
+from config.permissions import IsAuthenticated
+
 
 # ── helper ───────────────────────────────────────────
 def decode_token(request):
@@ -18,6 +21,8 @@ def decode_token(request):
 #sendmaeesage -----------------
 
 class SendMessageView(APIView):
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request, request_id):
         try:
             print("🔴 SEND MESSAGE HIT")  # ← add this first
@@ -92,6 +97,9 @@ class SendMessageView(APIView):
 # get chat history------------------------------------------------
 
 class ChatHistoryView(APIView):
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request, request_id):
         try:
             payload = decode_token(request)

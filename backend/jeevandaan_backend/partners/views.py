@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from .models import Partners,DonationCamp, CampEnrollment
 from .serializers import (
     PartnerRegisterSerializer,
@@ -18,6 +18,9 @@ from dotenv import load_dotenv
 from users.location import get_nearby_partners, get_nearby_donors
 from stock.models import Stock
 from datetime import date
+
+from config.authentication import PartnerJWTAuthentication
+from config.permissions import IsPartner
 
 
 
@@ -92,18 +95,11 @@ class NearbyPartnersView(APIView):
 
 
 class NearbyDonorsView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request):
-        try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can search donors.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
+    
             lat = request.query_params.get('lat')
             lng = request.query_params.get('lng')
             blood_group = request.query_params.get('blood_group')
@@ -135,14 +131,12 @@ class NearbyDonorsView(APIView):
 
             return Response(result)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 #------Register---------------------------------
 
 class PartnerRegisterView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self,request):
@@ -161,6 +155,7 @@ class PartnerRegisterView(APIView):
 #--------Login ---------------------------------
 
 class PartnerLoginView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -200,6 +195,8 @@ class PartnerLoginView(APIView):
     
         
 class PartnerPublicListView(APIView):
+    
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -216,27 +213,23 @@ class PartnerPublicListView(APIView):
         return Response(serializer.data)
     
 class PartnerProfileView(APIView):
-    permission_classes = [AllowAny]
+    
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request):
-        auth_header = request.headers.get('Authorization', '')
-        print("AUTH HEADER:", auth_header)
-
-        token = auth_header.replace('Bearer ', '').strip()
-        print("TOKEN:", token)
-        print("SECRET:", os.getenv('SECRET_KEY'))
+        partner = request.user
 
         try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            print("PAYLOAD:", payload)
-
-            if payload.get('type') != 'partner':
+            
+            if not isinstance(partner, Partners):
                 return Response(
-                    {'error': 'Invalid token type.'},
+                    {'error': 'Invalid user type.'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-            partner = Partners.objects.get(id=payload['id'])
-            return Response(PartnerProfileSerializer(partner).data)
+
+            serializer = PartnerProfileSerializer(partner)
+            return Response(serializer.data)
 
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -279,8 +272,9 @@ class PartnerProfileView(APIView):
 
 
 class UpdatePartnerLocationView(APIView):
-    permission_classes = [AllowAny]
-
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
+    
     def post(self, request):
         try:
             token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
@@ -318,6 +312,8 @@ class UpdatePartnerLocationView(APIView):
 
 
 class CreateCampView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request):
         try:
@@ -359,6 +355,8 @@ class CreateCampView(APIView):
 
 # ── Schedule & Notify ────────────────────────────────
 class ScheduleAndNotifyCampView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request, camp_id):
         try:
@@ -408,6 +406,8 @@ class ScheduleAndNotifyCampView(APIView):
 
 # ── Partner's own camps ──────────────────────────────
 class PartnerCampsView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request):
         try:
@@ -429,6 +429,7 @@ class PartnerCampsView(APIView):
 
 # ── Nearby camps — for donors ─────────────────────────
 class NearbyCampsView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -561,21 +562,20 @@ class EnrolledCampsListView(APIView):
 
 # ── Update stock after camp ───────────────────────────
 class UpdateStockAfterCampView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request, camp_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
 
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can update stock.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            partner = request.user
+            
+
+            
 
             camp = DonationCamp.objects.get(
                 id=camp_id,
-                organizer__id=payload['id']
+                organizer=partner
             )
 
             
@@ -590,18 +590,15 @@ class UpdateStockAfterCampView(APIView):
 
         except DonationCamp.DoesNotExist:
             return Response({'error': 'Camp not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
+        
 
 
 import csv
 from django.http import HttpResponse
 
 class DownloadCampEnrollmentsView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request, camp_id):
         try:
@@ -669,6 +666,8 @@ class DownloadCampEnrollmentsView(APIView):
 
 
 class RaiseInterPartnerRequestView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
     """Bank A requests Bank B for stock"""
 
     def post(self, request):
@@ -792,6 +791,8 @@ class RaiseInterPartnerRequestView(APIView):
 
 
 class InterPartnerRequestListView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
     """Partner sees incoming inter-partner requests"""
 
     def get(self, request):
@@ -827,6 +828,8 @@ class InterPartnerRequestListView(APIView):
 
 
 class AcceptInterPartnerRequestView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
     """Fulfilling partner accepts and marks fulfilled"""
 
     def post(self, request, inter_request_id):

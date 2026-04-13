@@ -4,6 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.utils import timezone
 from datetime import timedelta
+
+from config.authentication import DonorJWTAuthentication
+from config.permissions import IsDonor
 from .models import AttenderRequest, PartnerDonorRequest
 from .serializers import (
     AttenderRequestSerializer,
@@ -18,6 +21,9 @@ import os
 from notifications.helpers import notify_nearby_donors
 from users.location import get_nearby_partners, get_nearby_donors
 from .models import AttenderRating, DonorRating
+
+from config.authentication import PartnerJWTAuthentication
+from config.permissions import IsPartner
 
 
 # ── helper — decode token ────────────────────────────
@@ -84,6 +90,7 @@ class AttenderRequestCreateView(APIView):
 
 
 class AttenderRequestListView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -106,7 +113,6 @@ class AttenderRequestListView(APIView):
 
 
 class AttenderRequestDetailView(APIView):
-    permission_classes = [AllowAny]
 
     def get(self, request, reference_id):
         try:
@@ -124,6 +130,8 @@ class AttenderRequestDetailView(APIView):
 # ════════════════════════════════════════════════════
 
 class PartnerDonorRequestCreateView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request):
         try:
@@ -340,6 +348,9 @@ class DonorRequestDetailView(APIView):
 from .models import OTPCode
 
 class DonorAcceptRequestView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
+
 
     def post(self, request, request_id):
         try:
@@ -402,6 +413,8 @@ class DonorAcceptRequestView(APIView):
 
 
 class DonorCancelRequestView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request, request_id):
         try:
@@ -454,6 +467,8 @@ class DonorCancelRequestView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class FulfillAttenderRequestView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request, reference_id):
         try:
@@ -525,6 +540,8 @@ class GetRequestOTPView(APIView):
             )
 
 class VerifyOTPView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
     """Partner verifies donor OTP at bank"""
 
     def post(self, request):
@@ -573,7 +590,9 @@ class VerifyOTPView(APIView):
 
 
 class DonorPartnerRequestListView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
+    
 
     def get(self, request):
         try:
@@ -611,6 +630,8 @@ class DonorPartnerRequestListView(APIView):
 # rating
 
 class SubmitAttenderRatingView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
     """Attender rates partner after request fulfilled"""
 
     def post(self, request, reference_id):
@@ -687,6 +708,8 @@ class SubmitAttenderRatingView(APIView):
 
 
 class SubmitDonorRatingView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
     """Donor rates partner after donation fulfilled"""
 
     def post(self, request, request_id):
@@ -776,6 +799,8 @@ class SubmitDonorRatingView(APIView):
             )
 
 class MyAttenderRequestsView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
     """Donor sees their own raised requests"""
 
     def get(self, request):
