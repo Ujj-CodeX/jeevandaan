@@ -72,45 +72,24 @@ class DonorLoginView(APIView):
                 {'error': 'Account locked. Please try again later.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-            print("SIGN KEY:", os.getenv('SECRET_KEY'))
-
+            
             tokens = generate_jwt_token(donor.id)
             return Response({
             'message': 'Login successful.',
             'tokens': tokens,
             'donor': DonorProfileSerializer(donor).data
         })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DonorProfileView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
 
     def get(self, request):
-        auth_header = request.headers.get('Authorization', '')
-        print("AUTH HEADER:", auth_header)
-
-        if not auth_header:
-            return Response(
-                {'error': 'No token provided.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        token = auth_header.replace('Bearer ', '').strip()  # ← defined before try block
-        print("TOKEN:", token)
-        print("VERIFY KEY:", os.getenv('SECRET_KEY'))
-
-        try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            print("PAYLOAD:", payload)
-            donor = Donor.objects.get(id=payload['id'])
-            return Response(DonorProfileSerializer(donor).data)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError as e:
-            print("JWT ERROR:", str(e))
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Donor.DoesNotExist:
-            return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
+        donor = request.user
+        return Response(DonorProfileSerializer(donor).data)
+        
+        
         
 
 
@@ -123,9 +102,8 @@ class UpdateDonorLocationView(APIView):
 
     def post(self, request):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            donor = Donor.objects.get(id=payload['id'])
+            
+            donor = request.user
 
             lat = request.data.get('latitude')
             lng = request.data.get('longitude')
@@ -142,10 +120,7 @@ class UpdateDonorLocationView(APIView):
 
             return Response({'message': 'Location updated '})
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         except Donor.DoesNotExist:
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -172,8 +147,7 @@ class ForgotPasswordView(APIView):
             otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
             # Store in cache or temp model
-            # For simplicity — store in a temp field
-            # Better — use Django cache
+            
             from django.core.cache import cache
             cache.set(f'reset_otp_{email}', otp, timeout=600)  # 10 mins
 
@@ -257,15 +231,9 @@ class ChangePasswordView(APIView):
     permission_classes = [IsDonor]
 
     def post(self, request):
-        try:
-            token = request.headers.get(
-                'Authorization', ''
-            ).replace('Bearer ', '').strip()
-            payload = jwt.decode(
-                token, os.getenv('SECRET_KEY'),
-                algorithms=['HS256']
-            )
-            donor = Donor.objects.get(id=payload['id'])
+        
+            
+            donor = request.user
 
             current_password = request.data.get('current_password')
             new_password = request.data.get('new_password')
@@ -303,16 +271,7 @@ class ChangePasswordView(APIView):
                 'message': 'Password changed successfully! '
             })
 
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        
 
 class VerifyAadhaarView(APIView):
     authentication_classes = [DonorJWTAuthentication]
@@ -321,9 +280,8 @@ class VerifyAadhaarView(APIView):
     def post(self, request):
         try:
         
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            donor = Donor.objects.get(id=payload['id'])
+           
+            donor = request.user
 
             aadhaar_no = request.data.get('aadhaar_no')
 
@@ -358,18 +316,13 @@ class VerifyAadhaarView(APIView):
 
             
             donor.aadhaar_number = aadhaar_no
-            donor.is_aadhaar_verified = False   # pending state
+            donor.is_aadhaar_verified = False   
             donor.save()
 
             return Response({
                 'message': 'Aadhaar submitted. Verification is pending.'
             })
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Donor.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -381,9 +334,7 @@ class UpdateProfileView(APIView):
     def put(self, request):
         try:
             
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
 
         
             name = request.data.get('name')
@@ -398,7 +349,7 @@ class UpdateProfileView(APIView):
             if blood_group not in dict(Donor.BLOOD_GROUPS):
                 return Response({'error': 'Invalid blood group.'}, status=400)
 
-            # 💾 Update fields
+            
             donor.name = name
             donor.phone_number = phone
             donor.blood_group = blood_group
@@ -414,11 +365,6 @@ class UpdateProfileView(APIView):
                 'address': donor.address
             })
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=401)
-
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=401)
 
         except Donor.DoesNotExist:
             return Response({'error': 'User not found.'}, status=404)

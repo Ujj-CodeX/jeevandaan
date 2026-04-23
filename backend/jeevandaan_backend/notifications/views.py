@@ -41,17 +41,13 @@ def create_notification(donor=None, partner=None, notification_type='sms', trigg
 # ════════════════════════════════════════════════════
 
 class DonorNotificationListView(APIView):
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        try:
-            payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Unauthorized.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            donor = request.user
 
-            donor = Donor.objects.get(id=payload['id'])
+            
             notifications = Notification.objects.filter(
                 donor=donor
             ).order_by('-created_at')
@@ -60,10 +56,7 @@ class DonorNotificationListView(APIView):
                 NotificationSerializer(notifications, many=True).data
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 # ════════════════════════════════════════════════════
@@ -75,15 +68,9 @@ class PartnerNotificationListView(APIView):
     permission_classes = [IsPartner]
 
     def get(self, request):
-        try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Unauthorized.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            partner = request.user
 
-            partner = Partners.objects.get(id=payload['id'])
+            
             notifications = Notification.objects.filter(
                 partner=partner
             ).order_by('-created_at')
@@ -92,10 +79,7 @@ class PartnerNotificationListView(APIView):
                 NotificationSerializer(notifications, many=True).data
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+       
 
 
 # ════════════════════════════════════════════════════
@@ -103,16 +87,11 @@ class PartnerNotificationListView(APIView):
 # ════════════════════════════════════════════════════
 
 class NotifyNearbyDonorsView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can trigger notifications.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
             blood_group = request.data.get('blood_group')
             city = request.data.get('city')
             message = request.data.get(
@@ -139,30 +118,35 @@ class NotifyNearbyDonorsView(APIView):
                 'message': f'Notifications sent to {count} nearby donors.',
                 'donors_notified': count
             })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+    
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+       
 class MarkNotificationReadView(APIView):
     authentication_classes = [AnyJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, notification_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            sender_type = payload.get('type')
+            user =  request.user
+            
 
-            if sender_type == 'donor':
+            if isinstance(user, Donor):
                 notification = Notification.objects.get(
                     id=notification_id,
-                    donor__id=payload['id']
+                    donor__id=user
                 )
-            else:
+            elif isinstance(user, Partners):
                 notification = Notification.objects.get(
                     id=notification_id,
-                    partner__id=payload['id']
+                    partner=user
+                )
+
+            else:
+                return Response(
+                    {'error': 'Invalid user type.'},
+                    status=status.HTTP_403_FORBIDDEN
                 )
 
             notification.status = 'delivered'
@@ -176,7 +160,4 @@ class MarkNotificationReadView(APIView):
                 {'error': 'Notification not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        

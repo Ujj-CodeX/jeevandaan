@@ -25,11 +25,18 @@ from .models import AttenderRating, DonorRating
 from config.authentication import PartnerJWTAuthentication
 from config.permissions import IsPartner
 
+from config.authentication import DonorJWTAuthentication
+from config.permissions import IsDonor
 
-# ── helper — decode token ────────────────────────────
-def decode_token(request):
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    return jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+from config.authentication import AnyJWTAuthentication
+from config.permissions import IsAuthenticated
+
+
+
+
+
+
+
 
 
 # ════════════════════════════════════════════════════
@@ -37,17 +44,14 @@ def decode_token(request):
 # ════════════════════════════════════════════════════
 
 class AttenderRequestCreateView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only registered users can raise requests.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            
 
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
 
             # Check one request rule for unverified donors
             if not donor.is_aadhaar_verified:
@@ -81,16 +85,12 @@ class AttenderRequestCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         except Donor.DoesNotExist:
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class AttenderRequestListView(APIView):
-    authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -134,15 +134,8 @@ class PartnerDonorRequestCreateView(APIView):
     permission_classes = [IsPartner]
 
     def post(self, request):
-        try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can raise donor requests.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            partner = Partners.objects.get(id=payload['id'])
+        
+            partner = request.user
             serializer = PartnerDonorRequestSerializer(data=request.data)
 
             if serializer.is_valid():
@@ -171,15 +164,13 @@ class PartnerDonorRequestCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 
 class PartnerDonorRequestListView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     DEFAULT_RADIUS_KM = 10      
     FALLBACK_RADIUS_KM = 50    
@@ -189,10 +180,7 @@ class PartnerDonorRequestListView(APIView):
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
 
-        print("=== REQUEST HIT ===")
-        print("donor_lat:", donor_lat)
-        print("donor_lon:", donor_lon)
-        print("blood_group:", blood_group)
+        
 
         open_requests = PartnerDonorRequest.objects.filter(
     status='open'  # ← include assigned
@@ -200,12 +188,12 @@ class PartnerDonorRequestListView(APIView):
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
-            print("AFTER BG FILTER:", open_requests.count())
-        print("lat/lon present?", bool(donor_lat and donor_lon))
+            
+        
 
         if donor_lat and donor_lon:
             partners_in_requests = list(set([req.partner for req in open_requests]))
-            print("UNIQUE PARTNERS:", len(partners_in_requests))
+           
 
             for p in partners_in_requests:
 
@@ -243,7 +231,8 @@ class PartnerDonorRequestListView(APIView):
         )
     
 class PartnerDonorRequestListDetailView(APIView):
-    permission_classes = [AllowAny]
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     DEFAULT_RADIUS_KM = 10      
     FALLBACK_RADIUS_KM = 50    
@@ -253,10 +242,7 @@ class PartnerDonorRequestListDetailView(APIView):
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
 
-        print("=== REQUEST HIT ===")
-        print("donor_lat:", donor_lat)
-        print("donor_lon:", donor_lon)
-        print("blood_group:", blood_group)
+       
 
         open_requests = PartnerDonorRequest.objects.filter(
         status__in=['open', 'assigned']  # ← include assigned
@@ -264,12 +250,12 @@ class PartnerDonorRequestListDetailView(APIView):
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
-            print("AFTER BG FILTER:", open_requests.count())
-        print("lat/lon present?", bool(donor_lat and donor_lon))
+            
+        
 
         if donor_lat and donor_lon:
             partners_in_requests = list(set([req.partner for req in open_requests]))
-            print("UNIQUE PARTNERS:", len(partners_in_requests))
+            
 
             for p in partners_in_requests:
 
@@ -307,19 +293,13 @@ class PartnerDonorRequestListDetailView(APIView):
         )
 
 class DonorRequestDetailView(APIView):
-    """Get single donor request by ID — for chat page"""
-    permission_classes = [AllowAny]
+    authentication_classes = [AnyJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
 
     def get(self, request, request_id):
         try:
-            token = request.headers.get(
-                'Authorization', ''
-            ).replace('Bearer ', '').strip()
-            payload = jwt.decode(
-                token,
-                os.getenv('SECRET_KEY'),
-                algorithms=['HS256']
-            )
+            
 
             req = PartnerDonorRequest.objects.select_related(
                 'partner', 'assigned_donor'
@@ -354,8 +334,8 @@ class DonorAcceptRequestView(APIView):
 
     def post(self, request, request_id):
         try:
-            payload = decode_token(request)
-            donor = Donor.objects.get(id=payload['id'])
+            
+            donor = request.user
 
             if donor.is_locked:
                 return Response(
@@ -418,8 +398,8 @@ class DonorCancelRequestView(APIView):
 
     def post(self, request, request_id):
         try:
-            payload = decode_token(request)
-            donor = Donor.objects.get(id=payload['id'])
+            
+            donor = request.user
 
             req = PartnerDonorRequest.objects.get(
                 id=request_id,
@@ -461,10 +441,7 @@ class DonorCancelRequestView(APIView):
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 class FulfillAttenderRequestView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
@@ -472,14 +449,9 @@ class FulfillAttenderRequestView(APIView):
 
     def post(self, request, reference_id):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can fulfill requests.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            
 
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
 
             req = AttenderRequest.objects.get(
                 reference_id=reference_id,
@@ -506,20 +478,18 @@ class FulfillAttenderRequestView(APIView):
 
 
 class GetRequestOTPView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request, request_id):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can view OTP.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
+            partner = request.user
+           
             from .models import OTPCode
             otp = OTPCode.objects.get(
                 request_id=request_id,
-                is_used=False
+                is_used=False,
+                request__partner=partner
             )
             return Response({'otp_code': otp.code})
 
@@ -528,16 +498,7 @@ class GetRequestOTPView(APIView):
                 {'otp_code': None},
                 status=status.HTTP_200_OK
             )
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        
 
 class VerifyOTPView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
@@ -546,13 +507,7 @@ class VerifyOTPView(APIView):
 
     def post(self, request):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can verify OTP.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
+            partner = request.user
             otp_code = request.data.get('otp_code')
             if not otp_code:
                 return Response(
@@ -561,7 +516,7 @@ class VerifyOTPView(APIView):
                 )
 
             try:
-                otp = OTPCode.objects.get(code=otp_code, is_used=False)
+                otp = OTPCode.objects.get(code=otp_code, is_used=False,request__partner=partner) #Later fix 
             except OTPCode.DoesNotExist:
                 return Response(
                     {'error': 'Invalid or already used OTP.'},
@@ -596,18 +551,9 @@ class DonorPartnerRequestListView(APIView):
 
     def get(self, request):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            
 
-            if not token:
-                return Response({'error': 'No token provided.'}, status=401)
-
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            # Must be partner
-            if payload.get('type') != 'partner':
-                return Response({'error': 'Only partners can access this.'}, status=403)
-
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
 
             # Fetch only THIS partner's requests
             requests = PartnerDonorRequest.objects.filter(
@@ -618,10 +564,7 @@ class DonorPartnerRequestListView(APIView):
             data = PartnerDonorRequestPublicSerializer(requests, many=True).data
             return Response(data)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=401)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=401)
+        
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=404)
         except Exception as e:
@@ -636,14 +579,9 @@ class SubmitAttenderRatingView(APIView):
 
     def post(self, request, reference_id):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only attenders can rate.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            
 
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
             req = AttenderRequest.objects.get(
                 reference_id=reference_id,
                 attender=donor,
@@ -701,11 +639,7 @@ class SubmitAttenderRatingView(APIView):
                 {'error': 'Fulfilled request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+       
 
 class SubmitDonorRatingView(APIView):
     authentication_classes = [DonorJWTAuthentication]
@@ -714,16 +648,9 @@ class SubmitDonorRatingView(APIView):
 
     def post(self, request, request_id):
         try:
-            payload = decode_token(request)
+           
 
-            # Only DONOR can rate  
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only donors can submit ratings.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
 
             # Find the request assigned to THIS donor
             req = PartnerDonorRequest.objects.get(
@@ -787,16 +714,7 @@ class SubmitDonorRatingView(APIView):
                 {'error': 'Donor not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        
 
 class MyAttenderRequestsView(APIView):
     authentication_classes = [DonorJWTAuthentication]
@@ -805,14 +723,9 @@ class MyAttenderRequestsView(APIView):
 
     def get(self, request):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only donors can access this.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+           
 
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
 
             requests = AttenderRequest.objects.filter(
                 attender=donor
@@ -847,13 +760,4 @@ class MyAttenderRequestsView(APIView):
                 {'error': 'Donor not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        

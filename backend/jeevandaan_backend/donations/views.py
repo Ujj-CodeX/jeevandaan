@@ -10,12 +10,15 @@ from partners.models import Partners
 from requests_app.models import PartnerDonorRequest
 import jwt
 import os
+from config.authentication import PartnerJWTAuthentication
+from config.permissions import IsPartner
+from config.authentication import DonorJWTAuthentication
+from config.permissions import IsDonor
+
 
 
 # ── helper ───────────────────────────────────────────
-def decode_token(request):
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    return jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
 
 
 # ════════════════════════════════════════════════════
@@ -23,17 +26,12 @@ def decode_token(request):
 # ════════════════════════════════════════════════════
 
 class VerifyDonationView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request, request_id):
         try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can verify donations.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
             req = PartnerDonorRequest.objects.get(
                 id=request_id,
                 partner=partner,
@@ -85,10 +83,7 @@ class VerifyDonationView(APIView):
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 # ════════════════════════════════════════════════════
@@ -96,17 +91,13 @@ class VerifyDonationView(APIView):
 # ════════════════════════════════════════════════════
 
 class DonorHistoryView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
+
+
 
     def get(self, request):
-        try:
-            payload = decode_token(request)
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only donors can view their history.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            donor = Donor.objects.get(id=payload['id'])
+            donor = request.user
             history = DonationHistory.objects.filter(
                 donor=donor
             ).order_by('-donated_at')
@@ -115,28 +106,21 @@ class DonorHistoryView(APIView):
                 DonationHistorySerializer(history, many=True).data
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+        
 
 # ════════════════════════════════════════════════════
 #  PARTNER VIEWS RECEIVED DONATIONS
 # ════════════════════════════════════════════════════
 
 class PartnerDonationHistoryView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def get(self, request):
-        try:
-            payload = decode_token(request)
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can view this.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        
+            
 
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
             history = DonationHistory.objects.filter(
                 partner=partner
             ).order_by('-donated_at')
@@ -144,12 +128,6 @@ class PartnerDonationHistoryView(APIView):
             return Response(
                 DonationHistorySerializer(history, many=True).data
             )
-
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
 
 # ════════════════════════════════════════════════════
 #  PUBLIC LEADERBOARD

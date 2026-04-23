@@ -22,6 +22,9 @@ from datetime import date
 from config.authentication import PartnerJWTAuthentication
 from config.permissions import IsPartner
 
+from config.authentication import DonorJWTAuthentication
+from config.permissions import IsDonor
+
 
 
 #--token_generation----------------------
@@ -220,33 +223,21 @@ class PartnerProfileView(APIView):
     def get(self, request):
         partner = request.user
 
-        try:
-            
-            if not isinstance(partner, Partners):
+        if not isinstance(partner, Partners):
                 return Response(
                     {'error': 'Invalid user type.'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
 
-            serializer = PartnerProfileSerializer(partner)
-            return Response(serializer.data)
+        serializer = PartnerProfileSerializer(partner)
+        return Response(serializer.data)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError as e:
-            print("JWT ERROR:", str(e))
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Partners.DoesNotExist:
-            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
 
     def put(self, request):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-        try:
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            if payload.get('type') != 'partner':
-                return Response({'error': 'Invalid token type.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            partner = Partners.objects.get(id=payload['id'])
+        
+        
+            partner = request.user
 
             # Only allow updating these fields
             allowed_fields = [
@@ -262,12 +253,7 @@ class PartnerProfileView(APIView):
             partner.save()
             return Response(PartnerProfileSerializer(partner).data)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Partners.DoesNotExist:
-            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
+       
         
 
 
@@ -276,10 +262,7 @@ class UpdatePartnerLocationView(APIView):
     permission_classes = [IsPartner]
     
     def post(self, request):
-        try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
 
             lat = request.data.get('latitude')
             lng = request.data.get('longitude')
@@ -296,12 +279,6 @@ class UpdatePartnerLocationView(APIView):
 
             return Response({'message': 'Location updated  '})
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Partners.DoesNotExist:
-            return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
         
 ####################################################################
 # 
@@ -316,17 +293,8 @@ class CreateCampView(APIView):
     permission_classes = [IsPartner]
 
     def post(self, request):
-        try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can create camps.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            partner = Partners.objects.get(id=payload['id'])
+        
+            partner = request.user
             serializer = DonationCampSerializer(data=request.data)
 
             if serializer.is_valid():
@@ -347,10 +315,7 @@ class CreateCampView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 # ── Schedule & Notify ────────────────────────────────
@@ -360,19 +325,12 @@ class ScheduleAndNotifyCampView(APIView):
 
     def post(self, request, camp_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            partner = request.user
 
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can notify.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Get camp
+            
             camp = DonationCamp.objects.get(
                 id=camp_id,
-                organizer__id=payload['id']
+                organizer__id=partner.id
             )
 
             # 🔥 Use pipeline
@@ -392,17 +350,7 @@ class ScheduleAndNotifyCampView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        
 
 # ── Partner's own camps ──────────────────────────────
 class PartnerCampsView(APIView):
@@ -410,10 +358,9 @@ class PartnerCampsView(APIView):
     permission_classes = [IsPartner]
 
     def get(self, request):
-        try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            partner = Partners.objects.get(id=payload['id'])
+        
+            
+            partner = request.user
 
             camps = DonationCamp.objects.filter(
                 organizer=partner
@@ -421,11 +368,7 @@ class PartnerCampsView(APIView):
 
             return Response(DonationCampSerializer(camps, many=True).data)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+       
 
 # ── Nearby camps — for donors ─────────────────────────
 class NearbyCampsView(APIView):
@@ -465,21 +408,13 @@ class NearbyCampsView(APIView):
 
 # ── Enroll in camp ────────────────────────────────────
 class EnrollCampView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
 
     def post(self, request, camp_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Only donors can enroll.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            from users.models import Donor
-            donor = Donor.objects.get(id=payload['id'])
-            camp = DonationCamp.objects.get(id=camp_id)
+            donor=request.user
+            camp = DonationCamp.objects.get(id=camp_id, status='scheduled') # Only allow enrollment in scheduled camps
 
             # Check already enrolled
             if CampEnrollment.objects.filter(camp=camp, donor=donor).exists():
@@ -510,36 +445,25 @@ class EnrollCampView(APIView):
 
         except DonationCamp.DoesNotExist:
             return Response({'error': 'Camp not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 
 # ── Fetch Enrolled Camps for a specific Donor ──────────
 class EnrolledCampsListView(APIView):
+    authentication_classes = [DonorJWTAuthentication]
+    permission_classes = [IsDonor]
     """
     Returns a list of all camps the currently logged-in donor 
     has enrolled in.
     """
     def get(self, request):
-        try:
-            # 1. Decode token to get Donor ID
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+            donor = request.user
 
-            # 2. Security Check: Ensure the token belongs to a donor
-            if payload.get('type') != 'donor':
-                return Response(
-                    {'error': 'Unauthorized. Donor access required.'}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            donor_id = payload.get('id')
+            donor_id = donor.id
 
             # 3. Fetch enrollments for this donor
-            # We select_related('camp') to optimize the database query
+            
             enrollments = CampEnrollment.objects.filter(donor_id=donor_id).select_related('camp')
 
             # 4. Serialize the Camp data through the enrollment
@@ -552,12 +476,7 @@ class EnrolledCampsListView(APIView):
 
             return Response(result, status=status.HTTP_200_OK)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
 
 # ── Update stock after camp ───────────────────────────
@@ -602,18 +521,10 @@ class DownloadCampEnrollmentsView(APIView):
 
     def get(self, request, camp_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can download.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
+            partner=request.user
             camp = DonationCamp.objects.get(
                 id=camp_id,
-                organizer__id=payload['id']
+                organizer__id=partner.id
             )
 
             # Only allow download on camp date or after
@@ -656,10 +567,7 @@ class DownloadCampEnrollmentsView(APIView):
                 {'error': 'Camp not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 # Inter Partner Request Handling
@@ -672,16 +580,8 @@ class RaiseInterPartnerRequestView(APIView):
 
     def post(self, request):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can raise inter-partner requests.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            requesting_partner = Partners.objects.get(id=payload['id'])
+            partner =  request.user
+            requesting_partner = Partners.objects.get(id=partner.id)
 
             blood_group = request.data.get('blood_group')
             quantity = request.data.get('quantity')
@@ -784,10 +684,7 @@ class RaiseInterPartnerRequestView(APIView):
 
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 class InterPartnerRequestListView(APIView):
@@ -796,10 +693,9 @@ class InterPartnerRequestListView(APIView):
     """Partner sees incoming inter-partner requests"""
 
     def get(self, request):
-        try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            partner = Partners.objects.get(id=payload['id'])
+      
+            
+            partner = request.user
 
             from requests_app.models import InterPartnerRequest
             incoming = InterPartnerRequest.objects.filter(
@@ -821,10 +717,7 @@ class InterPartnerRequestListView(APIView):
 
             return Response(data)
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 
 class AcceptInterPartnerRequestView(APIView):
@@ -834,9 +727,7 @@ class AcceptInterPartnerRequestView(APIView):
 
     def post(self, request, inter_request_id):
         try:
-            token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-            payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            partner = Partners.objects.get(id=payload['id'])
+            partner = request.user
 
             from requests_app.models import InterPartnerRequest
             inter_req = InterPartnerRequest.objects.get(
@@ -869,7 +760,4 @@ class AcceptInterPartnerRequestView(APIView):
 
         except InterPartnerRequest.DoesNotExist:
             return Response({'error': 'Request not found.'}, status=status.HTTP_404_NOT_FOUND)
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+       
