@@ -21,7 +21,7 @@ class DonorJWTAuthentication(BaseAuthentication):
         
         try:
             payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-            if payload.get('user_type') != 'donor':
+            if payload.get('type') != 'donor':
                 raise AuthenticationFailed('Invalid token for donor')
             donor = Donor.objects.get(id=payload['id'])
             return (donor, token)
