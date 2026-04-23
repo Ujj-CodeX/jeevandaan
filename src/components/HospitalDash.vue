@@ -1043,7 +1043,7 @@ creatingCamp: false,
 notifyingCamp: null,
 campError: null,
 campSuccess: null,
-frozenCamp: null,
+
 
 campForm: {
     title: '',
@@ -1234,21 +1234,49 @@ acceptingInterReq: null,
     },
 
     async updateStock(bloodGroup) {
-      this.updatingStock = bloodGroup
-      this.stockMessage = null
-      try {
-        await api.post('https://jeevandaan-yaal.onrender.com/api/stock/update/', { blood_group: bloodGroup, quantity: this.stock[bloodGroup] })
-        this.stockHistory.unshift({ id: Date.now(), blood_group: bloodGroup, quantity: this.stock[bloodGroup], updated_at: new Date().toISOString() })
+  this.updatingStock = bloodGroup
+  this.stockMessage = null
 
-        await this.fetchProfile();
-        this.stockMessage = { type: 'success', text: `${bloodGroup} stock updated to ${this.stock[bloodGroup]} units successfully!` }
-        setTimeout(() => { this.stockMessage = null }, 3000)
-      } catch (err) {
-        this.stockMessage = { type: 'error', text: `Failed to update ${bloodGroup} stock. Please try again.` }
-      } finally {
-        this.updatingStock = null
-      }
-    },
+  try {
+    const token = localStorage.getItem("partner_token")  
+
+    await fetch('https://jeevandaan-yaal.onrender.com/api/stock/update/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`   
+      },
+      body: JSON.stringify({
+        blood_group: bloodGroup,
+        quantity: this.stock[bloodGroup]
+      })
+    })
+
+    this.stockHistory.unshift({
+      id: Date.now(),
+      blood_group: bloodGroup,
+      quantity: this.stock[bloodGroup],
+      updated_at: new Date().toISOString()
+    })
+
+    await this.fetchProfile()
+
+    this.stockMessage = {
+      type: 'success',
+      text: `${bloodGroup} stock updated to ${this.stock[bloodGroup]} units successfully!`
+    }
+
+    setTimeout(() => { this.stockMessage = null }, 3000)
+
+  } catch (err) {
+    this.stockMessage = {
+      type: 'error',
+      text: `Failed to update ${bloodGroup} stock. Please try again.`
+    }
+  } finally {
+    this.updatingStock = null
+  }
+},
 
     async broadcastDonorRequest() {
       this.broadcastLoading = true
@@ -1582,18 +1610,6 @@ async scheduleAndNotify(campId) {
     }
 },
 
-// ── Update stock after camp ──────────────
-async updateCampStock(campId) {
-    try {
-        await api.post(`https://jeevandaan-yaal.onrender.com/api/partners/camps/${campId}/update-stock/`)
-        alert('Stock updated!')
-        this.isDashboardFrozen = false
-        this.frozenCamp = null
-        await this.fetchCamps()
-    } catch (err) {
-        alert('Failed to update. Please try again.')
-    }
-},
 
 // ── Check camp date passed ───────────────
 isCampPast(camp) {

@@ -10,34 +10,22 @@ from .models import Stock
 from .serializers import StockSerializer
 import jwt
 import os
+from config.authentication import PartnerJWTAuthentication
+from config.permissions import IsPartner
 
 load_dotenv()
 
 
 class StockUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
 
     def post(self, request):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
-
-        if not token:
-            return Response(
-                {'error': 'No token provided.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
+        partner = request.user
         try:
-            secret = os.getenv('SECRET_KEY')
-            payload = jwt.decode(token, secret, algorithms=['HS256'])
-            print("PAYLOAD:", payload)
+           
 
-            if payload.get('type') != 'partner':
-                return Response(
-                    {'error': 'Only partners can update stock.'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            partner_id = payload['id']
+            partner_id = partner.id
             blood_group = request.data.get('blood_group')
             quantity = request.data.get('quantity')
 
@@ -58,17 +46,7 @@ class StockUpdateView(APIView):
                 'stock': StockSerializer(stock).data
             })
 
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except jwt.InvalidTokenError as e:
-            print("JWT ERROR:", str(e))
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        
         except Exception as e:
             print("ERROR:", str(e))
             return Response(

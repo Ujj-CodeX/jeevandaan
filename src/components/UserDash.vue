@@ -434,7 +434,7 @@
     </span>
     <span v-else>Accept</span>
 </button>
-          <button class="btn btn-light btn-sm rounded-pill flex-grow-1 py-2 border">Decline</button>
+          
         </div>
       </div>
     </div>
