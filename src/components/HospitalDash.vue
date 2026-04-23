@@ -1234,23 +1234,23 @@ acceptingInterReq: null,
     },
 
     async updateStock(bloodGroup) {
+  const token = localStorage.getItem('access_token')
   this.updatingStock = bloodGroup
   this.stockMessage = null
 
   try {
-    const token = localStorage.getItem("partner_token")  
-
-    await fetch('https://jeevandaan-yaal.onrender.com/api/stock/update/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`   
-      },
-      body: JSON.stringify({
+    await api.post(
+      'https://jeevandaan-yaal.onrender.com/api/stock/update/',
+      {
         blood_group: bloodGroup,
         quantity: this.stock[bloodGroup]
-      })
-    })
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
 
     this.stockHistory.unshift({
       id: Date.now(),
@@ -1269,6 +1269,7 @@ acceptingInterReq: null,
     setTimeout(() => { this.stockMessage = null }, 3000)
 
   } catch (err) {
+    console.log("ERROR:", err.response?.data)  
     this.stockMessage = {
       type: 'error',
       text: `Failed to update ${bloodGroup} stock. Please try again.`
