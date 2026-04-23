@@ -1401,6 +1401,7 @@ getStockLabel(partner) {
       }
 
       try {
+        console.log("TOKEN BEFORE API CALL:", token)
         const response = await fetch('https://jeevandaan-yaal.onrender.com/api/users/profile/', {
           headers: {
             'Authorization': `Bearer ${token}`
