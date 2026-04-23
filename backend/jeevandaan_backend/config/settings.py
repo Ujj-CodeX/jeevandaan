@@ -34,6 +34,11 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://jeevandaan-yaal.onrender.com',
+    'https://jeevandaan-pi.vercel.app',
+]
+
 
 # Application definition
 
