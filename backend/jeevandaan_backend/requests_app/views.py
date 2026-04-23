@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.utils import timezone
 from datetime import timedelta
+import threading  # ← KEY FIX: async notifications
 
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
@@ -24,19 +25,17 @@ from .models import AttenderRating, DonorRating
 
 from config.authentication import PartnerJWTAuthentication
 from config.permissions import IsPartner
-
-from config.authentication import DonorJWTAuthentication
-from config.permissions import IsDonor
-
 from config.authentication import AnyJWTAuthentication
 from config.permissions import IsAuthenticated
 
 
-
-
-
-
-
+# ─────────────────────────────────────────────────────────
+#  HELPER: run any callable in a daemon thread so it never
+#  blocks the HTTP response cycle.
+# ─────────────────────────────────────────────────────────
+def run_in_background(fn, *args, **kwargs):
+    t = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
+    t.start()
 
 
 # ════════════════════════════════════════════════════
@@ -48,53 +47,36 @@ class AttenderRequestCreateView(APIView):
     permission_classes = [IsDonor]
 
     def post(self, request):
-        try:
-            
+        donor = request.user
 
-            donor = request.user
-
-            # Check one request rule for unverified donors
-            if not donor.is_aadhaar_verified:
-                if donor.total_requests_raised >= 1:
-                    return Response(
-                        {'error': 'Verify Aadhaar to raise more requests.'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-
-            serializer = AttenderRequestSerializer(data=request.data)
-            if serializer.is_valid():
-                # Auto set expiry — 20 hours from now
-                expires_at = timezone.now() + timedelta(hours=20)
-                req = serializer.save(
-                    attender=donor,
-                    expires_at=expires_at
+        if not donor.is_aadhaar_verified:
+            if donor.total_requests_raised >= 1:
+                return Response(
+                    {'error': 'Verify Aadhaar to raise more requests.'},
+                    status=status.HTTP_403_FORBIDDEN
                 )
 
-                # Increment request count
-                donor.total_requests_raised += 1
-                donor.save()
+        serializer = AttenderRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            expires_at = timezone.now() + timedelta(hours=20)
+            req = serializer.save(attender=donor, expires_at=expires_at)
 
-                return Response({
-                    'message': 'Request raised successfully.',
-                    'reference_id': str(req.reference_id),
-                    'request': AttenderRequestSerializer(req).data
-                }, status=status.HTTP_201_CREATED)
+            donor.total_requests_raised += 1
+            donor.save()
 
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({
+                'message': 'Request raised successfully.',
+                'reference_id': str(req.reference_id),
+                'request': AttenderRequestSerializer(req).data
+            }, status=status.HTTP_201_CREATED)
 
-        
-        except Donor.DoesNotExist:
-            return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AttenderRequestListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        # Public — all pending requests visible to partners
         requests = AttenderRequest.objects.filter(
             status='pending'
         ).order_by('-created_at')
@@ -134,76 +116,71 @@ class PartnerDonorRequestCreateView(APIView):
     permission_classes = [IsPartner]
 
     def post(self, request):
-        
-            partner = request.user
-            serializer = PartnerDonorRequestSerializer(data=request.data)
+        partner = request.user
+        serializer = PartnerDonorRequestSerializer(data=request.data)
 
-            if serializer.is_valid():
-                expires_at = timezone.now() + timedelta(hours=12)
-                req = serializer.save(
-                    partner=partner,
-                    expires_at=expires_at
-                )
+        if serializer.is_valid():
+            expires_at = timezone.now() + timedelta(hours=12)
+            req = serializer.save(partner=partner, expires_at=expires_at)
 
-                # Auto notify nearby donors!  
-                notify_nearby_donors(
-                    blood_group=req.blood_group,
-                    partner_lat=partner.latitude,
-                    partner_lng=partner.longitude,
-                    message=f'Urgent! {req.blood_group} blood needed at {partner.hospital_name}. Please donate!',
-                    radius_km=10
-                )
-
-                return Response({
-                    'message': 'Donor request raised successfully.',
-                    'request': PartnerDonorRequestSerializer(req).data
-                }, status=status.HTTP_201_CREATED)
-
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+            # ── FIX: fire notification in background — never block the response
+            run_in_background(
+                notify_nearby_donors,
+                blood_group=req.blood_group,
+                partner_lat=partner.latitude,
+                partner_lng=partner.longitude,
+                message=(
+                    f'Urgent! {req.blood_group} blood needed at '
+                    f'{partner.hospital_name}. Please donate!'
+                ),
+                radius_km=10,
             )
 
-        
+            return Response({
+                'message': 'Donor request raised successfully.',
+                'request': PartnerDonorRequestSerializer(req).data
+            }, status=status.HTTP_201_CREATED)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PartnerDonorRequestListView(APIView):
     authentication_classes = [AnyJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    DEFAULT_RADIUS_KM = 10      
-    FALLBACK_RADIUS_KM = 50    
+    DEFAULT_RADIUS_KM = 10
+    FALLBACK_RADIUS_KM = 50
 
     def get(self, request):
         donor_lat   = request.query_params.get('lat')
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
 
-        
-
+        # ── FIX: select_related avoids N+1 on partner; only fetch open
         open_requests = PartnerDonorRequest.objects.filter(
-    status='open'  # ← include assigned
-).select_related('partner').order_by('-created_at')
+            status='open'
+        ).select_related('partner').order_by('-created_at')
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
-            
-        
 
         if donor_lat and donor_lon:
-            partners_in_requests = list(set([req.partner for req in open_requests]))
-           
+            # ── FIX: get distinct partner ids from the queryset directly
+            #    instead of loading all request objects into memory first.
+            partner_ids = open_requests.values_list(
+                'partner_id', flat=True
+            ).distinct()
 
-            for p in partners_in_requests:
-
-                print(f"Partner: {p.hospital_name} | lat: {p.latitude} | lng: {p.longitude}")
-
+            partners_qs = Partners.objects.filter(
+                id__in=partner_ids,
+                latitude__isnull=False,
+                longitude__isnull=False,
+            )
 
             nearby_partners = get_nearby_partners(
                 donor_lat, donor_lon,
-                partners_in_requests,
-                radius_km=self.DEFAULT_RADIUS_KM  
+                list(partners_qs),
+                radius_km=self.DEFAULT_RADIUS_KM,
             )
 
             distance_map = {
@@ -212,60 +189,61 @@ class PartnerDonorRequestListView(APIView):
             }
             nearby_partner_ids = list(distance_map.keys())
 
-            open_requests = open_requests.filter(partner_id__in=nearby_partner_ids)
+            open_requests = open_requests.filter(
+                partner_id__in=nearby_partner_ids
+            )
 
-            data = PartnerDonorRequestPublicSerializer(open_requests, many=True).data
+            data = PartnerDonorRequestPublicSerializer(
+                open_requests, many=True
+            ).data
+
             for item in data:
-                partner_id = next(
-                    (req.partner_id for req in open_requests if req.id == item['id']),
-                    None
+                item['distance_km'] = distance_map.get(
+                    item.get('partner_id') or item.get('partner'), None
                 )
-                item['distance_km'] = distance_map.get(partner_id, None)
 
-            data = sorted(data, key=lambda x: x['distance_km'] or 999)
+            data = sorted(data, key=lambda x: x.get('distance_km') or 999)
             return Response(data)
 
-        
         return Response(
             PartnerDonorRequestPublicSerializer(open_requests, many=True).data
         )
-    
+
+
 class PartnerDonorRequestListDetailView(APIView):
     authentication_classes = [AnyJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    DEFAULT_RADIUS_KM = 10      
-    FALLBACK_RADIUS_KM = 50    
+    DEFAULT_RADIUS_KM = 10
+    FALLBACK_RADIUS_KM = 50
 
     def get(self, request):
         donor_lat   = request.query_params.get('lat')
         donor_lon   = request.query_params.get('lon')
         blood_group = request.query_params.get('blood_group')
 
-       
-
         open_requests = PartnerDonorRequest.objects.filter(
-        status__in=['open', 'assigned']  # ← include assigned
-).select_related('partner').order_by('-created_at')
+            status__in=['open', 'assigned']
+        ).select_related('partner').order_by('-created_at')
 
         if blood_group:
             open_requests = open_requests.filter(blood_group=blood_group)
-            
-        
 
         if donor_lat and donor_lon:
-            partners_in_requests = list(set([req.partner for req in open_requests]))
-            
+            partner_ids = open_requests.values_list(
+                'partner_id', flat=True
+            ).distinct()
 
-            for p in partners_in_requests:
-
-                print(f"Partner: {p.hospital_name} | lat: {p.latitude} | lng: {p.longitude}")
-
+            partners_qs = Partners.objects.filter(
+                id__in=partner_ids,
+                latitude__isnull=False,
+                longitude__isnull=False,
+            )
 
             nearby_partners = get_nearby_partners(
                 donor_lat, donor_lon,
-                partners_in_requests,
-                radius_km=self.DEFAULT_RADIUS_KM  
+                list(partners_qs),
+                radius_km=self.DEFAULT_RADIUS_KM,
             )
 
             distance_map = {
@@ -274,33 +252,33 @@ class PartnerDonorRequestListDetailView(APIView):
             }
             nearby_partner_ids = list(distance_map.keys())
 
-            open_requests = open_requests.filter(partner_id__in=nearby_partner_ids)
+            open_requests = open_requests.filter(
+                partner_id__in=nearby_partner_ids
+            )
 
-            data = PartnerDonorRequestPublicSerializer(open_requests, many=True).data
+            data = PartnerDonorRequestPublicSerializer(
+                open_requests, many=True
+            ).data
+
             for item in data:
-                partner_id = next(
-                    (req.partner_id for req in open_requests if req.id == item['id']),
-                    None
+                item['distance_km'] = distance_map.get(
+                    item.get('partner_id') or item.get('partner'), None
                 )
-                item['distance_km'] = distance_map.get(partner_id, None)
 
-            data = sorted(data, key=lambda x: x['distance_km'] or 999)
+            data = sorted(data, key=lambda x: x.get('distance_km') or 999)
             return Response(data)
 
-        
         return Response(
             PartnerDonorRequestPublicSerializer(open_requests, many=True).data
         )
+
 
 class DonorRequestDetailView(APIView):
     authentication_classes = [AnyJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-
     def get(self, request, request_id):
         try:
-            
-
             req = PartnerDonorRequest.objects.select_related(
                 'partner', 'assigned_donor'
             ).get(id=request_id)
@@ -317,10 +295,7 @@ class DonorRequestDetailView(APIView):
             })
 
         except PartnerDonorRequest.DoesNotExist:
-            return Response(
-                {'error': 'Request not found.'},
-                status=404
-            )
+            return Response({'error': 'Request not found.'}, status=404)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
@@ -331,10 +306,8 @@ class DonorAcceptRequestView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
 
-
     def post(self, request, request_id):
         try:
-            
             donor = request.user
 
             if donor.is_locked:
@@ -343,7 +316,7 @@ class DonorAcceptRequestView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            req = PartnerDonorRequest.objects.get(
+            req = PartnerDonorRequest.objects.select_related('partner').get(
                 id=request_id,
                 status='open'
             )
@@ -352,22 +325,27 @@ class DonorAcceptRequestView(APIView):
             req.status = 'assigned'
             req.save()
 
-            # Generate OTP
             OTPCode.objects.filter(request=req).delete()
             otp = OTPCode.objects.create(
                 request=req,
                 code=OTPCode.generate_code()
             )
 
-            #   Create notification for partner
-            from notifications.models import Notification
-            Notification.objects.create(
-                partner=req.partner,
-                notification_type='sms',
-                trigger='donor_accepted',
-                message=f'Donor #{donor.id} has accepted your blood request for {req.blood_group} ({req.quantity} units). OTP: {otp.code}',
-                status='pending'
-            )
+            # ── FIX: notification in background
+            def _notify():
+                from notifications.models import Notification
+                Notification.objects.create(
+                    partner=req.partner,
+                    notification_type='sms',
+                    trigger='donor_accepted',
+                    message=(
+                        f'Donor #{donor.id} has accepted your blood request '
+                        f'for {req.blood_group} ({req.quantity} units). '
+                        f'OTP: {otp.code}'
+                    ),
+                    status='pending'
+                )
+            run_in_background(_notify)
 
             return Response({
                 'message': 'Request accepted!',
@@ -381,15 +359,9 @@ class DonorAcceptRequestView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         except jwt.ExpiredSignatureError:
-            return Response(
-                {'error': 'Token expired.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
-            return Response(
-                {'error': 'Invalid token.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class DonorCancelRequestView(APIView):
@@ -398,7 +370,6 @@ class DonorCancelRequestView(APIView):
 
     def post(self, request, request_id):
         try:
-            
             donor = request.user
 
             req = PartnerDonorRequest.objects.get(
@@ -414,17 +385,14 @@ class DonorCancelRequestView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Cancel request
             req.status = 'open'
             req.assigned_donor = None
             req.cancellation_reason = reason
             req.save()
 
-            # Deduct score
             donor.reliability_score = max(0, donor.reliability_score - 10)
             donor.cancellation_count += 1
 
-            # Lock account after 3 cancellations
             if donor.cancellation_count >= 3:
                 donor.is_locked = True
                 donor.locked_until = timezone.now() + timedelta(days=30)
@@ -441,7 +409,7 @@ class DonorCancelRequestView(APIView):
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
 
 class FulfillAttenderRequestView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
@@ -449,8 +417,6 @@ class FulfillAttenderRequestView(APIView):
 
     def post(self, request, reference_id):
         try:
-            
-
             partner = request.user
 
             req = AttenderRequest.objects.get(
@@ -462,7 +428,7 @@ class FulfillAttenderRequestView(APIView):
             req.save()
 
             return Response({
-                'message': 'Request fulfilled successfully!  ',
+                'message': 'Request fulfilled successfully!',
                 'reference_id': str(req.reference_id)
             })
 
@@ -484,8 +450,6 @@ class GetRequestOTPView(APIView):
     def get(self, request, request_id):
         try:
             partner = request.user
-           
-            from .models import OTPCode
             otp = OTPCode.objects.get(
                 request_id=request_id,
                 is_used=False,
@@ -494,16 +458,12 @@ class GetRequestOTPView(APIView):
             return Response({'otp_code': otp.code})
 
         except OTPCode.DoesNotExist:
-            return Response(
-                {'otp_code': None},
-                status=status.HTTP_200_OK
-            )
-        
+            return Response({'otp_code': None}, status=status.HTTP_200_OK)
+
 
 class VerifyOTPView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
     permission_classes = [IsPartner]
-    """Partner verifies donor OTP at bank"""
 
     def post(self, request):
         try:
@@ -516,21 +476,21 @@ class VerifyOTPView(APIView):
                 )
 
             try:
-                otp = OTPCode.objects.get(code=otp_code, is_used=False,request__partner=partner) #Later fix 
+                otp = OTPCode.objects.select_related('request').get(
+                    code=otp_code, is_used=False, request__partner=partner
+                )
             except OTPCode.DoesNotExist:
                 return Response(
                     {'error': 'Invalid or already used OTP.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Mark OTP as used
-            from django.utils import timezone
             otp.is_used = True
             otp.used_at = timezone.now()
             otp.save()
 
             return Response({
-                'message': 'OTP verified successfully!  ',
+                'message': 'OTP verified successfully!',
                 'request_id': otp.request.id,
                 'blood_group': otp.request.blood_group,
                 'quantity': otp.request.quantity,
@@ -542,20 +502,14 @@ class VerifyOTPView(APIView):
             return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-
-
 class DonorPartnerRequestListView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
     permission_classes = [IsPartner]
-    
 
     def get(self, request):
         try:
-            
-
             partner = request.user
 
-            # Fetch only THIS partner's requests
             requests = PartnerDonorRequest.objects.filter(
                 partner=partner,
                 status__in=['open', 'assigned']
@@ -564,31 +518,29 @@ class DonorPartnerRequestListView(APIView):
             data = PartnerDonorRequestPublicSerializer(requests, many=True).data
             return Response(data)
 
-        
         except Partners.DoesNotExist:
             return Response({'error': 'Partner not found.'}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
 
-# rating
+
+# ════════════════════════════════════════════════════
+#  RATINGS
+# ════════════════════════════════════════════════════
 
 class SubmitAttenderRatingView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
-    """Attender rates partner after request fulfilled"""
 
     def post(self, request, reference_id):
         try:
-            
-
             donor = request.user
-            req = AttenderRequest.objects.get(
+            req = AttenderRequest.objects.select_related('partner').get(
                 reference_id=reference_id,
                 attender=donor,
                 status='fulfilled'
             )
 
-            # Check not already rated
             if AttenderRating.objects.filter(request=req).exists():
                 return Response(
                     {'error': 'Already rated this request.'},
@@ -618,7 +570,6 @@ class SubmitAttenderRatingView(APIView):
                 complaint_detail=complaint_detail if has_complaint else ''
             )
 
-            # Check bad ratings — suspend if 5+
             if has_complaint:
                 bad_count = AttenderRating.objects.filter(
                     partner=rating.partner,
@@ -630,7 +581,7 @@ class SubmitAttenderRatingView(APIView):
                     rating.partner.save()
 
             return Response({
-                'message': 'Rating submitted successfully!  ',
+                'message': 'Rating submitted successfully!',
                 'stars': stars
             }, status=status.HTTP_201_CREATED)
 
@@ -639,27 +590,22 @@ class SubmitAttenderRatingView(APIView):
                 {'error': 'Fulfilled request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-       
+
 
 class SubmitDonorRatingView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
-    """Donor rates partner after donation fulfilled"""
 
     def post(self, request, request_id):
         try:
-           
-
             donor = request.user
 
-            # Find the request assigned to THIS donor
-            req = PartnerDonorRequest.objects.get(
+            req = PartnerDonorRequest.objects.select_related('partner').get(
                 id=request_id,
-                assigned_donor=donor,      # ← must be assigned to this donor
-                status='fulfilled'         # ← only after fulfilled
+                assigned_donor=donor,
+                status='fulfilled'
             )
 
-            # Check not already rated
             if DonorRating.objects.filter(request=req).exists():
                 return Response(
                     {'error': 'You have already rated this request.'},
@@ -675,33 +621,26 @@ class SubmitDonorRatingView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Donor rates the PARTNER
             DonorRating.objects.create(
-                partner=req.partner,       # ← partner being rated
-                donor=donor,               # ← donor who is rating
+                partner=req.partner,
+                donor=donor,
                 request=req,
                 stars=stars,
                 review=review
             )
 
-            # Update partner reliability based on rating
-            partner = req.partner
-            if stars >= 4:
-                # Good rating → partner score up
-                partner.convenience_fee = partner.convenience_fee  # no change
-            elif stars <= 2:
-                # Bad rating → check complaints
+            if stars <= 2:
+                partner = req.partner
                 bad_ratings = DonorRating.objects.filter(
-                    partner=partner,
-                    stars__lte=2
+                    partner=partner, stars__lte=2
                 ).count()
 
                 if bad_ratings >= 5:
-                    partner.is_live = False  # ← suspend after 5 bad ratings
+                    partner.is_live = False
                     partner.save()
 
             return Response({
-                'message': 'Rating submitted successfully! Thank you 🙏'
+                'message': 'Rating submitted successfully! Thank you'
             }, status=status.HTTP_201_CREATED)
 
         except PartnerDonorRequest.DoesNotExist:
@@ -709,35 +648,29 @@ class SubmitDonorRatingView(APIView):
                 {'error': 'Fulfilled request not found or not assigned to you.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except Donor.DoesNotExist:
-            return Response(
-                {'error': 'Donor not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
+
 
 class MyAttenderRequestsView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
-    """Donor sees their own raised requests"""
 
     def get(self, request):
         try:
-           
-
             donor = request.user
 
             requests = AttenderRequest.objects.filter(
                 attender=donor
             ).order_by('-created_at')
 
+            # ── FIX: batch fetch rated request ids — avoids N+1 per-request query
+            rated_ids = set(
+                AttenderRating.objects.filter(
+                    request__attender=donor
+                ).values_list('request_id', flat=True)
+            )
+
             data = []
             for req in requests:
-                # Check if already rated
-                is_rated = AttenderRating.objects.filter(
-                    request=req
-                ).exists()
-
                 data.append({
                     'reference_id': str(req.reference_id),
                     'patient_name': req.patient_name,
@@ -747,7 +680,7 @@ class MyAttenderRequestsView(APIView):
                     'hospital_name': req.hospital_name,
                     'city': req.city,
                     'status': req.status,
-                    'is_rated': is_rated,
+                    'is_rated': req.id in rated_ids,
                     'expires_at': req.expires_at,
                     'created_at': req.created_at,
                     'updated_at': req.updated_at,
@@ -760,4 +693,3 @@ class MyAttenderRequestsView(APIView):
                 {'error': 'Donor not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
