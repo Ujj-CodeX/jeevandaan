@@ -18,10 +18,8 @@ from config.permissions import IsAuthenticated
 
 
 
-# ── helper ───────────────────────────────────────────
-def decode_token(request):
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    return jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+
+
 
 
 # ── helper — create notification ─────────────────────
