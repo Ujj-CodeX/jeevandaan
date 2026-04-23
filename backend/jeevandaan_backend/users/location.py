@@ -1,6 +1,15 @@
-from geopy.distance import geodesic
+from math import radians, sin, cos, sqrt, atan2
 
-from geopy.distance import geodesic
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # Earth radius in km
+
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    return R * c
 
 def get_nearby_partners(user_lat, user_lng, partners, radius_km=10):
     """
@@ -23,7 +32,12 @@ def get_nearby_partners(user_lat, user_lng, partners, radius_km=10):
                     float(partner.longitude)
                 )
 
-                distance = geodesic(user_location, partner_location).km
+                distance = calculate_distance(
+    user_location[0],
+    user_location[1],
+    partner_location[0],
+    partner_location[1]
+)
 
                 if distance <= radius_km:
                     nearby.append({
@@ -50,7 +64,12 @@ def get_nearby_donors(user_lat, user_lng, donors, radius_km=10):
             donor_location = (float(donor.latitude), float(donor.longitude))
             user_location = (float(user_lat), float(user_lng))
 
-            distance = geodesic(user_location, donor_location).km
+            distance = calculate_distance(
+                user_location[0],
+                user_location[1],
+                donor_location[0],
+                donor_location[1]
+            )
 
             if distance <= radius_km:
                 nearby.append({
