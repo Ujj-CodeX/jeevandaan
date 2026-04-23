@@ -3,7 +3,7 @@ import os
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed     
 from users.models import Donor
-from partners.models import Partner
+from partners.models import Partners
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,13 +47,13 @@ class PartnerJWTAuthentication(BaseAuthentication):
             payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=['HS256'])
             if payload.get('type') != 'partner':
                 raise AuthenticationFailed('Invalid token for partner')
-            partner = Partner.objects.get(id=payload['id'])
+            partner = Partners.objects.get(id=payload['id'])
             return (partner, token)
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('Token expired.')
         except jwt.InvalidTokenError:
             raise AuthenticationFailed('Invalid token.')
-        except Partner.DoesNotExist:
+        except Partners.DoesNotExist:
             raise AuthenticationFailed('Partner not found.')
         
 class AnyJWTAuthentication(BaseAuthentication):
@@ -73,7 +73,7 @@ class AnyJWTAuthentication(BaseAuthentication):
             if user_type == 'donor':
                 user = Donor.objects.get(id=payload['id'])
             elif user_type == 'partner':
-                user = Partner.objects.get(id=payload['id'])
+                user = Partners.objects.get(id=payload['id'])
             else:
                 raise AuthenticationFailed('Invalid token for any user type')
             return (user, token)
@@ -81,5 +81,5 @@ class AnyJWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed('Token expired.')
         except jwt.InvalidTokenError:
             raise AuthenticationFailed('Invalid token.')
-        except (Donor.DoesNotExist, Partner.DoesNotExist):
+        except (Donor.DoesNotExist, Partners.DoesNotExist):
             raise AuthenticationFailed('User not found.')
