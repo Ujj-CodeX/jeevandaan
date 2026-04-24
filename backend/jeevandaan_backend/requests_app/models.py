@@ -20,6 +20,8 @@ class AttenderRequest(models.Model):
         ('critical', 'Critical'),
     ]
 
+
+
     attender = models.ForeignKey(Donor, on_delete=models.CASCADE)  # fixed: was attender_id
     reference_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # fixed: was reference_idpatit
     patient_name = models.CharField(max_length=100)
@@ -27,6 +29,14 @@ class AttenderRequest(models.Model):
     patient_photo = models.URLField(max_length=500, blank=True, null=True)      # ← URLField
     doctor_letterhead = models.URLField(max_length=500, blank=True, null=True)  # ← URLField
     attender_id_proof = models.URLField(max_length=500, blank=True, null=True)
+
+    fulfilled_by = models.ForeignKey(      
+        'partners.Partners',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='fulfilled_attender_requests'
+    )
 
     quantity = models.PositiveIntegerField()
     blood_group = models.CharField(max_length=3, choices=Donor.BLOOD_GROUPS)

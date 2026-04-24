@@ -315,6 +315,13 @@ class DonorAcceptRequestView(APIView):
                     {'error': 'Your account is locked.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
+            
+            if not donor.is_aadhaar_verified:
+                return Response(
+                    {'error': 'Aadhaar verification required to accept donation requests.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
 
             req = PartnerDonorRequest.objects.select_related('partner').get(
                 id=request_id,
@@ -425,6 +432,7 @@ class FulfillAttenderRequestView(APIView):
             )
 
             req.status = 'fulfilled'
+            req.fulfilled_by = partner
             req.save()
 
             return Response({
@@ -535,7 +543,9 @@ class SubmitAttenderRatingView(APIView):
     def post(self, request, reference_id):
         try:
             donor = request.user
-            req = AttenderRequest.objects.select_related('partner').get(
+            req = AttenderRequest.objects.select_related(
+                'fulfilled_by'                 
+            ).get(
                 reference_id=reference_id,
                 attender=donor,
                 status='fulfilled'
@@ -561,7 +571,7 @@ class SubmitAttenderRatingView(APIView):
 
             rating = AttenderRating.objects.create(
                 attender=donor,
-                partner=req.partner if hasattr(req, 'partner') else None,
+                partner=req.fulfilled_by,
                 request=req,
                 stars=int(stars),
                 review=review,
