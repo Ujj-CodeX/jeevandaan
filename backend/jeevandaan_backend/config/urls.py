@@ -17,6 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from config.cron_views import (
+    ExpireAttenderRequestsView,
+    ExpireDonorRequestsView,
+    UnlockDonorAccountsView,
+    ExpireUnvisitedDonorRequestsView
+)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
@@ -26,6 +33,10 @@ urlpatterns = [
     path('api/donations/', include('donations.urls')),
     path('api/chat/', include('chat.urls')),
     path('api/notifications/', include('notifications.urls')),
+    path('cron/expire-attender/', ExpireAttenderRequestsView.as_view()),
+    path('cron/expire-donor/', ExpireDonorRequestsView.as_view()),
+    path('cron/unlock-donors/', UnlockDonorAccountsView.as_view()),
+    path('cron/expire-unvisited/', ExpireUnvisitedDonorRequestsView.as_view()),
     
 
     
