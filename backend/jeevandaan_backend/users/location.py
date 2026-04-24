@@ -1,81 +1,101 @@
-from math import radians, sin, cos, sqrt, atan2
+# users/location.py  — drop-in replacement
+# Adds a SQL bounding-box pre-filter BEFORE the expensive geodesic loop.
+# This drastically reduces CPU work and prevents worker SIGKILL on Render.
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371  # Earth radius in km
+from geopy.distance import geodesic
 
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
 
-    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    return R * c
-
-def get_nearby_partners(user_lat, user_lng, partners, radius_km=10):
+def _bounding_box(lat, lng, radius_km):
     """
-    Returns partners within radius_km of user location
-    sorted by distance (closest first)
+    Returns (min_lat, max_lat, min_lng, max_lng) for a rough square
+    around the point. 1 degree lat ≈ 111 km everywhere.
+    1 degree lng ≈ 111 km * cos(lat).
     """
+    import math
+    lat, lng = float(lat), float(lng)
+    delta_lat = radius_km / 111.0
+    delta_lng = radius_km / (111.0 * math.cos(math.radians(lat)))
+    return (
+        lat - delta_lat,
+        lat + delta_lat,
+        lng - delta_lng,
+        lng + delta_lng,
+    )
 
-    nearby = []
+
+def get_nearby_partners(lat, lng, partners_qs, radius_km=10):
+    """
+    Returns a list of dicts: [{'partner': <obj>, 'distance_km': float}, ...]
+    sorted by distance ascending.
+
+    partners_qs can be a QuerySet or a plain Python list.
+    """
+    lat, lng = float(lat), float(lng)
+
+    # --- Step 1: cheap bounding-box SQL filter (only if it's a QuerySet) ---
+    try:
+        min_lat, max_lat, min_lng, max_lng = _bounding_box(lat, lng, radius_km)
+        partners_qs = partners_qs.filter(
+            latitude__gte=min_lat,
+            latitude__lte=max_lat,
+            longitude__gte=min_lng,
+            longitude__lte=max_lng,
+        )
+    except (AttributeError, TypeError):
+        # It's a plain list — skip SQL filter, geodesic will handle it
+        pass
+
+    # --- Step 2: precise geodesic filter on the (now small) subset ---
+    result = []
+    for partner in partners_qs:
+        try:
+            p_lat = float(partner.latitude)
+            p_lng = float(partner.longitude)
+        except (TypeError, ValueError):
+            continue
+
+        distance = geodesic((lat, lng), (p_lat, p_lng)).km
+        if distance <= radius_km:
+            result.append({
+                'partner': partner,
+                'distance_km': round(distance, 1),
+            })
+
+    result.sort(key=lambda x: x['distance_km'])
+    return result
+
+
+def get_nearby_donors(lat, lng, donors_qs, radius_km=10):
+    """
+    Same pattern for donors.
+    """
+    lat, lng = float(lat), float(lng)
 
     try:
-        user_location = (float(user_lat), float(user_lng))
-    except:
-        return []
+        min_lat, max_lat, min_lng, max_lng = _bounding_box(lat, lng, radius_km)
+        donors_qs = donors_qs.filter(
+            latitude__gte=min_lat,
+            latitude__lte=max_lat,
+            longitude__gte=min_lng,
+            longitude__lte=max_lng,
+        )
+    except (AttributeError, TypeError):
+        pass
 
-    for partner in partners:
-        if partner.latitude is not None and partner.longitude is not None:
-            try:
-                partner_location = (
-                    float(partner.latitude),
-                    float(partner.longitude)
-                )
+    result = []
+    for donor in donors_qs:
+        try:
+            d_lat = float(donor.latitude)
+            d_lng = float(donor.longitude)
+        except (TypeError, ValueError):
+            continue
 
-                distance = calculate_distance(
-    user_location[0],
-    user_location[1],
-    partner_location[0],
-    partner_location[1]
-)
+        distance = geodesic((lat, lng), (d_lat, d_lng)).km
+        if distance <= radius_km:
+            result.append({
+                'donor': donor,
+                'distance_km': round(distance, 1),
+            })
 
-                if distance <= radius_km:
-                    nearby.append({
-                        'partner': partner,
-                        'distance_km': round(distance, 2)
-                    })
-
-            except Exception as e:
-                print(f"Error for partner {partner.id}: {e}")
-                continue
-
-    nearby.sort(key=lambda x: x['distance_km'])
-    return nearby
-    
-def get_nearby_donors(user_lat, user_lng, donors, radius_km=10):
-    """
-    Returns donors within radius_km
-    sorted by distance closest first
-    """
-    nearby = []
-
-    for donor in donors:
-        if donor.latitude and donor.longitude:
-            donor_location = (float(donor.latitude), float(donor.longitude))
-            user_location = (float(user_lat), float(user_lng))
-
-            distance = calculate_distance(
-                user_location[0],
-                user_location[1],
-                donor_location[0],
-                donor_location[1]
-            )
-
-            if distance <= radius_km:
-                nearby.append({
-                    'donor': donor,
-                    'distance_km': round(distance, 2)
-                })
-
-    nearby.sort(key=lambda x: x['distance_km'])
-    return nearby
+    result.sort(key=lambda x: x['distance_km'])
+    return result
