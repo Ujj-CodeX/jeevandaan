@@ -1,6 +1,12 @@
 from django.urls import path
-from .views import DonorRegisterView, DonorLoginView, DonorProfileView,UpdateDonorLocationView,ForgotPasswordView, ResetPasswordView, ChangePasswordView, VerifyAadhaarView, UpdateProfileView, ExpireAttenderRequestsView, ExpireDonorRequestsView, UnlockDonorAccountsView, ExpireUnvisitedDonorRequestsView
+from .views import DonorRegisterView, DonorLoginView, DonorProfileView,UpdateDonorLocationView,ForgotPasswordView, ResetPasswordView, ChangePasswordView, VerifyAadhaarView, UpdateProfileView
 
+from config.cron_views import (
+    ExpireAttenderRequestsView,
+    ExpireDonorRequestsView,
+    UnlockDonorAccountsView,
+    ExpireUnvisitedDonorRequestsView
+)
 urlpatterns = [
     path('register/', DonorRegisterView.as_view()),
     path('login/', DonorLoginView.as_view()),
