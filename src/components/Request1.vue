@@ -788,18 +788,18 @@ export default {
       let idRegex;
 
       switch (this.form.id_type) {
-        case "aadhaar":
-          idRegex = /^\d{12}$/;
-          break;
+  case "Aadhaar Card":
+    idRegex = /^\d{12}$/;
+    break;
 
-        case "voter":
-          idRegex = /^[A-Z]{3}\d{7}$/;
-          break;
+  case "Voter ID":
+    idRegex = /^[A-Z]{3}\d{7}$/;
+    break;
 
-        case "dl":
-          idRegex = /^[A-Z0-9]{8,16}$/;
-          break;
-      }
+  case "Driving License":
+    idRegex = /^[A-Z0-9]{8,16}$/;
+    break;
+}
 
       if (!idRegex.test(this.form.id_no)) {
         throw new Error("Invalid ID number");
@@ -876,13 +876,14 @@ export default {
 
         handleCity() {
   this.form.city = this.form.city
-    .replace(/[^A-Za-z\u0900-\u097F\s]/g, '')
-    .replace(/\s{2,}/g, ' ') 
+    .replace(/[^\p{L}\s]/gu, '')
+    .replace(/\s{2,}/g, ' ')
     .slice(0, 50);
+
 },
 handleDoctorName() {
   this.form.doctor_name = this.form.doctor_name
-    .replace(/[^A-Za-z\u0900-\u097F\s.'-]/g, '')
+    .replace(/[^\p{L}\s.'-]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, 60);
 },
