@@ -112,7 +112,7 @@
 
 <div class="input-group-custom">
     <i class="fa-solid fa-indian-rupee-sign text-muted"></i>
-    <input type="number" v-model="form.convenience_fee" placeholder="Convenience Fee (₹)" min="0" required maxlength="300">
+    <input type="number" v-model="form.convenience_fee" placeholder="Convenience Fee (₹)" min="0" required>
 </div>
 
             <div class="input-group-custom mb-2" style="position: relative;">
@@ -226,7 +226,7 @@ export default {
 
              handleCity(field) {
   this.form[field] = this.form[field]
-    .replace(/[^\p{L}\s]/gu, '')
+    .replace(/[^A-Za-z\s]/g, '')
     .replace(/\s{2,}/g, ' ')
     .slice(0, 50)
 },
