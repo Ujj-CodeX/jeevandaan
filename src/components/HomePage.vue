@@ -225,9 +225,9 @@
         </div>
 
         <div class="text-center mt-3">
-          <button class="btn btn-link text-muted small fw-bold text-decoration-none text-uppercase tracking-widest">
-            View All Requests <i class="fas fa-chevron-down ms-1"></i>
-          </button>
+          <router-link to="/login" class="btn btn-light w-100 py-2 rounded-4">
+            View All Requests
+          </router-link>
         </div>
       </div>
     </div>

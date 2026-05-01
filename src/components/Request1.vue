@@ -275,6 +275,9 @@
                                 v-model="form.hospital_name"
                                 placeholder="Enter Hospital Name"
                                 required
+                                minlength="3"
+                                maxlength="100"
+                                pattern="[A-Za-z\s.&'-]{3,100}"
                             >
                         </div>
                         <div class="col-md-6">
@@ -286,6 +289,8 @@
                                 v-model="form.city"
                                 placeholder="City"
                                 required
+                                @input="handleCity"
+                                maxlength="50"
                             >
                         </div>
                         <div class="col-md-6">
@@ -295,8 +300,10 @@
                                 type="text"
                                 class="form-control"
                                 v-model="form.doctor_name"
+                                @input="handleDoctorName"
                                 placeholder="Dr. Name"
                                 required
+                                maxlength="60"
                             >
                         </div>
                         <div class="col-md-6">
@@ -306,7 +313,9 @@
                                 type="tel"
                                 class="form-control"
                                 v-model="form.doctor_phone"
-                                placeholder="+91"
+                                 @input="handlePhone('doctor_phone')"
+                                placeholder="+91XXXXXXXXXX"
+                                
                             >
                         </div>
                         <div class="col-md-6">
@@ -316,7 +325,8 @@
                                 type="tel"
                                 class="form-control"
                                 v-model="form.attender_phone"
-                                placeholder="+91"
+                                @input="handlePhone('attender_phone')"
+                                placeholder="+91XXXXXXXXXX"
                                 required
                             >
                         </div>
@@ -339,12 +349,14 @@
                                 v-model="form.attender_name"
                                 placeholder="Full Name"
                                 required
+                                maxlength="60"
                             >
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Attender ID Type</label>
                             <span class="hindi-sub">परिजन का पहचान प्रकार</span>
                             <select class="form-select" v-model="form.id_type" required>
+                                <option disabled value="">Select ID Type</option>
                                 <option>Aadhaar Card</option>
                                 <option>Driving License</option>
                                 <option>Voter ID</option>
@@ -358,6 +370,7 @@
                                 class="form-control"
                                 v-model="form.id_no"
                                 placeholder="Enter ID Number"
+                                @input="handleIdInput"
                                 required
                             >
                         </div>
@@ -385,7 +398,8 @@
                                     ref="letterheadInput"
                                     @change="handleFileChange($event, 'letterhead')"
                                     accept="image/*,application/pdf"
-                                    style="display:none"
+                                    style="display:none" 
+                                    required
                                 >
                                 <div v-if="uploadProgress.letterhead">
                                     <div class="spinner-border spinner-border-sm text-danger mb-2"></div>
@@ -417,6 +431,7 @@
                                     @change="handleFileChange($event, 'patient_photo')"
                                     accept="image/*"
                                     style="display:none"
+                                    required
                                 >
                                 <div v-if="uploadProgress.patient_photo">
                                     <div class="spinner-border spinner-border-sm text-danger mb-2"></div>
@@ -452,6 +467,7 @@
                                     @change="handleFileChange($event, 'attender_id_proof')"
                                     accept="image/*,application/pdf"
                                     style="display:none"
+                                    required
                                 >
                                 <div v-if="uploadProgress.attender_id_proof">
                                     <div class="spinner-border spinner-border-sm text-danger mb-2"></div>
@@ -762,6 +778,60 @@ export default {
             this.error = null
 
             try {
+
+                // Id validation
+                if (!this.form.id_type) {
+        throw new Error("Please select ID type");
+      }
+
+      // ID Number validation (based on type)
+      let idRegex;
+
+      switch (this.form.id_type) {
+        case "aadhaar":
+          idRegex = /^\d{12}$/;
+          break;
+
+        case "voter":
+          idRegex = /^[A-Z]{3}\d{7}$/;
+          break;
+
+        case "dl":
+          idRegex = /^[A-Z0-9]{8,16}$/;
+          break;
+      }
+
+      if (!idRegex.test(this.form.id_no)) {
+        throw new Error("Invalid ID number");
+      }
+
+                // FRONTEND VALIDATION (FIRST STEP)
+               const phoneRegex = /^[6-9]\d{9}$/;
+
+               if (!this.form.hospital_name.trim()) {
+              throw new Error("Hospital name is required");
+               }
+
+              if (!this.form.city.trim()) {
+               throw new Error("City is required");
+               }
+
+             if (!this.form.doctor_name.trim()) {
+               throw new Error("Doctor name is required");
+               }
+
+              if (!phoneRegex.test(this.form.attender_phone)) {
+             throw new Error("Invalid attender phone number");
+           }
+
+           if (this.form.doctor_phone && !phoneRegex.test(this.form.doctor_phone)) {
+             throw new Error("Invalid doctor phone number");
+             }
+
+               if (!this.termsAccepted) {
+                 throw new Error("Accept Terms & Conditions");
+            } 
+
                 const token = localStorage.getItem('access_token')
                 if (!token) {
                     this.$router.push('/login')
@@ -800,7 +870,48 @@ export default {
             } finally {
                 this.submitting = false
             }
-        }
+        },
+
+        // Form-handlers
+
+        handleCity() {
+  this.form.city = this.form.city
+    .replace(/[^A-Za-z\u0900-\u097F\s]/g, '')
+    .replace(/\s{2,}/g, ' ') 
+    .slice(0, 50);
+},
+handleDoctorName() {
+  this.form.doctor_name = this.form.doctor_name
+    .replace(/[^A-Za-z\u0900-\u097F\s.'-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, 60);
+},
+handlePhone(field) {
+  let val = this.form[field].replace(/\D/g, '');
+
+  // Indian number must be 10 digits
+  if (val.length > 10) val = val.slice(0, 10);
+
+  this.form[field] = val;
+},
+handleIdInput() {
+  let val = this.form.id_no.toUpperCase();
+
+  if (this.form.id_type === "aadhaar") {
+    // Only digits, max 12
+    val = val.replace(/\D/g, '').slice(0, 12);
+  } 
+  else if (this.form.id_type === "voter") {
+    // Format: ABC1234567
+    val = val.replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  } 
+  else if (this.form.id_type === "dl") {
+    // DL is alphanumeric (state + digits)
+    val = val.replace(/[^A-Z0-9]/g, '').slice(0, 16);
+  }
+
+  this.form.id_no = val;
+}
     }
 }
 </script>

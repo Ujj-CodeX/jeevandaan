@@ -41,7 +41,7 @@
     <div class="col-md-6">
         <div class="input-group-custom">
             <i class="fa-solid fa-phone text-muted"></i>
-            <input type="tel" v-model="form.phone_number" placeholder="Mobile Number" required>
+            <input type="tel" v-model="form.phone_number" @input="handlePhoneInput" placeholder="Mobile Number" required>
         </div>
     </div>
     <div class="col-md-6">
@@ -81,7 +81,6 @@
 
             <div class="form-check mb-4">
               <input class="form-check-input" type="checkbox" id="termsCheck"
-                :disabled="!termsRead"
                 v-model="termsAccepted">
               <label class="form-check-label text-muted small" for="termsCheck">
                 I agree to the
@@ -102,7 +101,7 @@
 
             <button type="submit" class="btn-register" :disabled="!termsAccepted">Register Now</button>
             <p class="text-center mt-3 text-muted small">Already a member?
-              <a href="#" class="text-primary fw-bold text-decoration-none">Login</a>
+              <router-link to="/login" class="text-primary fw-bold text-decoration-none">Login</router-link>
             </p>
           </form>
         </div>
@@ -166,10 +165,10 @@ export default {
     methods: {
         async handleRegister() {
             // Validate terms
-            if (!this.termsAccepted) {
-                this.error = 'Please accept Terms & Conditions first.'
-                return
-            }
+            if (!this.termsRead || !this.termsAccepted) {
+  alert("Please read and accept Terms & Conditions");
+  return;
+}
 
             // Validate password
             const pw = this.form.password
@@ -239,6 +238,16 @@ export default {
             }
         }
     },
+
+    handlePhoneInput() {
+    
+    this.form.phone_number = this.form.phone_number.replace(/\D/g, '');
+
+    
+    if (this.form.phone_number.length > 10) {
+      this.form.phone_number = this.form.phone_number.slice(0, 10);
+    }
+  },
 
     mounted() {
         document.body.classList.add('register-page')

@@ -859,7 +859,7 @@
   </div>
   <p class="small text-muted mb-3">
     Reliability Score: <strong class="text-success">{{ donor.reliability_score }}</strong> |
-    Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? ' ' : '❌' }}</strong>
+    Aadhaar Verified: <strong>{{ donor.is_aadhaar_verified ? '✔️' : '❌' }}</strong>
   </p>
 
   <div v-if="!donor.is_aadhaar_verified" class="alert alert-danger py-2 px-3 small border-0 mb-0">
