@@ -26,13 +26,13 @@
     <div class="col-md-6">
         <div class="input-group-custom">
             <i class="fa-regular fa-user text-muted"></i>
-            <input type="text" v-model="form.name" placeholder="Full Name" required>
+            <input type="text" v-model="form.name" placeholder="Full Name" required maxlength="100">
         </div>
     </div>
     <div class="col-md-6">
         <div class="input-group-custom">
             <i class="fa-solid fa-at text-muted"></i>
-            <input type="text" v-model="form.username" placeholder="Username" required>
+            <input type="text" v-model="form.username" placeholder="Username" required maxlength="30">
         </div>
     </div>
 </div>
@@ -65,7 +65,7 @@
 
 <div class="input-group-custom">
     <i class="fa-solid fa-location-dot text-muted"></i>
-    <input type="text" v-model="form.address" placeholder="City / Address" required>
+    <input type="text" v-model="form.address" placeholder="City / Address" required maxlength="150">
 </div>
 
 <div class="input-group-custom mb-2" style="position: relative;">
@@ -236,10 +236,8 @@ export default {
                 input.type = 'password'
                 iconEl.classList.replace('fa-eye-slash', 'fa-eye')
             }
-        }
-    },
-
-    handlePhoneInput() {
+        },
+        handlePhoneInput() {
     
     this.form.phone_number = this.form.phone_number.replace(/\D/g, '');
 
@@ -248,6 +246,9 @@ export default {
       this.form.phone_number = this.form.phone_number.slice(0, 10);
     }
   },
+    },
+
+    
 
     mounted() {
         document.body.classList.add('register-page')
