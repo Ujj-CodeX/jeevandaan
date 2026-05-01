@@ -266,7 +266,7 @@ export default {
             this.error = null
 
             try {
-                const response = await api.post('https://jeevandaan-yaal.onrender.com/api/partners/register/', this.form)
+                 await api.post('https://jeevandaan-yaal.onrender.com/api/partners/register/', this.form)
 
                 
 
