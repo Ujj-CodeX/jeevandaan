@@ -828,10 +828,7 @@ export default {
              throw new Error("Invalid doctor phone number");
              }
 
-               if (!this.termsAccepted) {
-                 throw new Error("Accept Terms & Conditions");
-            } 
-
+               
                 const token = localStorage.getItem('access_token')
                 if (!token) {
                     this.$router.push('/login')
