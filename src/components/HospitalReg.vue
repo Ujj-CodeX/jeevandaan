@@ -42,7 +42,7 @@
                 <div class="input-group-custom">
                   <i class="fa-solid fa-layer-group text-muted"></i>
                   <select v-model="form.partner_type" required class="form-control">
-                    <option disabled value>Facility Type</option>
+                    <option disabled value="">Facility Type</option>
                     <option value="government">Government</option>
                     <option value="private_multi_specialty">Private Multi-specialty</option>
                     <option value="blood_bank">Blood Bank</option>
