@@ -898,15 +898,15 @@ handlePhone(field) {
 handleIdInput() {
   let val = this.form.id_no.toUpperCase();
 
-  if (this.form.id_type === "aadhaar") {
+  if (this.form.id_type === "Aadhaar Card") {
     // Only digits, max 12
     val = val.replace(/\D/g, '').slice(0, 12);
   } 
-  else if (this.form.id_type === "voter") {
+  else if (this.form.id_type === "Voter ID") {
     // Format: ABC1234567
     val = val.replace(/[^A-Z0-9]/g, '').slice(0, 10);
   } 
-  else if (this.form.id_type === "dl") {
+  else if (this.form.id_type === "Driving License") {
     // DL is alphanumeric (state + digits)
     val = val.replace(/[^A-Z0-9]/g, '').slice(0, 16);
   }
