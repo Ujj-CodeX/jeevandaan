@@ -81,7 +81,7 @@
 
             <div class="form-check mb-4">
               <input class="form-check-input" type="checkbox" id="termsCheck"
-                v-model="termsAccepted">
+                v-model="termsAccepted" required>
               <label class="form-check-label text-muted small" for="termsCheck">
                 I agree to the
                 <a href="#" @click.prevent="openTermsModal" class="text-danger fw-bold text-decoration-none">

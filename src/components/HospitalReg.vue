@@ -20,13 +20,13 @@
               <div class="col-md-6">
                 <div class="input-group-custom">
                   <i class="fa-solid fa-hospital text-muted"></i>
-                  <input type="text" v-model="form.hospital_name" placeholder="Hospital Name" required>
+                  <input type="text" v-model="form.hospital_name" placeholder="Hospital Name" required maxlength="100">
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="input-group-custom">
                   <i class="fa-solid fa-id-card text-muted"></i>
-                  <input type="text" v-model="form.license_id" placeholder="Reg/License ID" required>
+                  <input type="text" v-model="form.license_id" placeholder="Reg/License ID" required maxlength="50">
                 </div>
               </div>
             </div>
@@ -35,14 +35,14 @@
               <div class="col-md-6">
                 <div class="input-group-custom">
                   <i class="fa-solid fa-phone-volume text-muted"></i>
-                  <input type="tel" v-model="form.contact" placeholder="Emergency Contact" required>
+                  <input type="tel" v-model="form.contact" @input="handlePhone" placeholder="Emergency Contact" required>
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="input-group-custom">
                   <i class="fa-solid fa-layer-group text-muted"></i>
-                  <select v-model="form.partner_type">
-                    <option selected disabled>Facility Type</option>
+                  <select v-model="form.partner_type" required class="form-control">
+                    <option disabled value>Facility Type</option>
                     <option value="government">Government</option>
                     <option value="private_multi_specialty">Private Multi-specialty</option>
                     <option value="blood_bank">Blood Bank</option>
@@ -57,20 +57,50 @@
             </div>
             <div class="input-group-custom">
     <i class="fa-solid fa-map-marker-alt text-muted"></i>
-    <input type="text" v-model="form.address" placeholder="Full Address" required>
+    <input type="text" v-model="form.address" placeholder="Full Address" required maxlength="200">
 </div>
 
 <div class="row">
     <div class="col-md-6">
         <div class="input-group-custom">
             <i class="fa-solid fa-city text-muted"></i>
-            <input type="text" v-model="form.city" placeholder="City" required>
+            <input type="text" v-model="form.city" placeholder="City" @input="handleCity('city')" required>
         </div>
     </div>
     <div class="col-md-6">
         <div class="input-group-custom">
             <i class="fa-solid fa-map text-muted"></i>
-            <input type="text" v-model="form.state" placeholder="State" required>
+            <select v-model="form.state" required class="form-control">
+  <option disabled value="">Select State</option>
+  <option>Uttar Pradesh</option>
+  <option>Maharashtra</option>
+  <option>Bihar</option>
+  <option>West Bengal</option>
+  <option>Madhya Pradesh</option>
+  <option>Tamil Nadu</option>
+  <option>Rajasthan</option>
+  <option>Karnataka</option>
+  <option>Gujarat</option>
+  <option>Andhra Pradesh</option>
+  <option>Odisha</option>
+  <option>Telangana</option>
+  <option>Kerala</option>
+  <option>Jharkhand</option>
+  <option>Assam</option>
+  <option>Punjab</option>
+  <option>Chhattisgarh</option>
+  <option>Haryana</option>
+  <option>Uttarakhand</option>
+  <option>Himachal Pradesh</option>
+  <option>Tripura</option>
+  <option>Meghalaya</option>
+  <option>Manipur</option>
+  <option>Nagaland</option>
+  <option>Goa</option>
+  <option>Arunachal Pradesh</option>
+  <option>Mizoram</option>
+  <option>Sikkim</option>
+</select>
         </div>
     </div>
 </div>
@@ -82,7 +112,7 @@
 
 <div class="input-group-custom">
     <i class="fa-solid fa-indian-rupee-sign text-muted"></i>
-    <input type="number" v-model="form.convenience_fee" placeholder="Convenience Fee (₹)" min="0" required>
+    <input type="number" v-model="form.convenience_fee" placeholder="Convenience Fee (₹)" min="0" required maxlength="300">
 </div>
 
             <div class="input-group-custom mb-2" style="position: relative;">
@@ -98,8 +128,7 @@
 
             <div class="form-check mb-4">
               <input class="form-check-input" type="checkbox" id="hTerms"
-                :disabled="!termsRead"
-                v-model="termsAccepted">
+                v-model="termsAccepted" required>
               <label class="form-check-label text-muted small" for="hTerms">
                 We agree to the
                 <a href="#" @click.prevent="openTermsModal" class="text-primary fw-bold text-decoration-none">
@@ -190,11 +219,38 @@ export default {
     },
 
     methods: {
+      handlePhone() {
+  let val = this.form.contact.replace(/\D/g, '')
+  this.form.contact = val.slice(0, 10)
+},
+
+             handleCity(field) {
+  this.form[field] = this.form[field]
+    .replace(/[^\p{L}\s]/gu, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, 50)
+},
         async handleRegister() {
             if (!this.termsAccepted) {
                 this.error = 'Please accept Partner Terms first.'
                 return
             }
+            if (!/^[6-9]\d{9}$/.test(this.form.contact)) {
+            this.error = "Invalid contact number"
+             return
+             }
+
+             //email
+             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          if (!emailRegex.test(this.form.email)) {
+            this.error = "Invalid email address"
+            return
+            }
+            // facility type
+            if (!this.form.partner_type) {
+  this.error = "Please select facility type"
+  return
+}
 
             const pw = this.form.password
             if (pw.length < 8) {
@@ -212,20 +268,11 @@ export default {
             try {
                 const response = await api.post('https://jeevandaan-yaal.onrender.com/api/partners/register/', this.form)
 
-                // Store tokens
-                localStorage.setItem('access_token', response.data.tokens.access)
-                localStorage.setItem('refresh_token', response.data.tokens.refresh)
-                localStorage.setItem('user_type', 'partner')
-
-                // Store partner info
-                localStorage.setItem('partner', JSON.stringify(response.data.partner))
+                
 
                 this.success = 'Facility registered! Waiting for admin verification...'
 
-                // Redirect after 2 seconds
-                setTimeout(() => {
-                    this.$router.push('/partnersdash')
-                }, 2000)
+                
 
             } catch (error) {
                 if (error.response && error.response.data) {

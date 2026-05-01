@@ -150,10 +150,8 @@ class PartnerRegisterView(APIView):
         serializer = PartnerRegisterSerializer(data=request.data)
         if serializer.is_valid():
             partner = serializer.save()
-            tokens = generate_partner_token(partner.id)
             return Response({
                 'message': 'Partner registered successfully.',
-                'tokens': tokens,
                 'partner': PartnerProfileSerializer(partner).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
