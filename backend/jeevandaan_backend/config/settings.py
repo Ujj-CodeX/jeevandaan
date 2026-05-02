@@ -161,6 +161,13 @@ CORS_ALLOW_ALL_ORIGINS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL'),
+       
+    }
+}
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -178,5 +185,5 @@ REST_FRAMEWORK = {
 }
 
 
-print("DB HOST:", os.getenv('DB_HOST'))
-print("DB NAME:", os.getenv('DB_NAME'))
+
+
