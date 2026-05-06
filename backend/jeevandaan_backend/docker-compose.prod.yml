@@ -1,16 +1,61 @@
+version: '3.9'
+
 services:
+
+  # ── PostgreSQL Database ─────────────────────────────
+  db:
+    image: postgres:15-alpine          # official postgres image
+    container_name: jeevandaan_db
+    restart: always
+    environment:
+      POSTGRES_DB: jeevandaan          # database name
+      POSTGRES_USER: postgres          # db username
+      POSTGRES_PASSWORD: postgres123   # db password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persist data across restarts
+    ports:
+      - "5432:5432"                    # host:container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (for Django cache — used in ForgotPassword) ──
+  redis:
+    image: redis:7-alpine
+    container_name: jeevandaan_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # ── Django Backend ──────────────────────────────────
   web:
-    build: .
+    build: .                           # build from our Dockerfile
     container_name: jeevandaan_web
     restart: always
     command: >
       sh -c "python manage.py migrate &&
-              python manage.py collectstatic --noinput &&
-              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --preload"
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
+             --preload"
+    volumes:
+      - .:/app                         # live reload — your code changes reflect instantly
+      - static_volume:/app/staticfiles
     ports:
-      - "8000:8000"
+      - "8000:8000"                    # your API is at localhost:8000
     env_file:
-      - .env
+      - .env                           # load your .env file
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/jeevandaan
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy     # wait for postgres to be ready
+      redis:
+        condition: service_started
 
-      
-            
+# ── Named Volumes ───────────────────────────────────
+volumes:
+  postgres_data:
+  static_volume:
