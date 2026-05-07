@@ -54,6 +54,50 @@ services:
         condition: service_healthy     # wait for postgres to be ready
       redis:
         condition: service_started
+  celery_worker:
+    build: .
+    container_name: jeevandaan_celery
+    restart: always
+
+    command: celery -A config worker --loglevel=info --concurrency=2
+    
+    volumes:
+      - .:/app
+
+    env_file:
+      - .env
+
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/jeevandaan
+      - REDIS_URL=redis://redis:6379/0
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  celery_beat:
+    build: .
+    container_name: jeevandaan_celery_beat
+    restart: always
+
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    
+    volumes:
+      - .:/app
+
+    env_file:
+      - .env
+
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres123@db:5432/jeevandaan
+      - REDIS_URL=redis://redis:6379/0
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 # ── Named Volumes ───────────────────────────────────
 volumes:

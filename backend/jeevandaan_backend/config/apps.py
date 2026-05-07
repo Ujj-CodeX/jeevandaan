@@ -12,5 +12,4 @@ class ConfigConfig(AppConfig):
         if os.getenv('RENDER') == 'true':
             return
 
-        from scheduler import start
-        start()
+        

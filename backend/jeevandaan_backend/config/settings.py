@@ -14,6 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 import dj_database_url
+from celery.schedules import crontab
 
 
 # Load environment variables from .env file
@@ -183,6 +184,45 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': [],
 }
+
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+# Redis is the "post office" — Celery Beat drops messages here, Worker picks them up.
+
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+# Stores task results (success/failure) back in Redis. Optional but useful for debugging.
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# Stores beat schedule in PostgreSQL so you can manage it from Django Admin.
+
+INSTALLED_APPS += ['django_celery_beat']
+
+# Celery Beat Schedule
+
+CELERY_BEAT_SCHEDULE = {
+
+    'expire-attender-requests': {
+        'task': 'requests_app.tasks.expire_attender_requests',
+        'schedule': 900,  # every 15 minutes in seconds
+    },
+    'expire-donor-requests': {
+        'task': 'requests_app.tasks.expire_donor_requests',
+        'schedule': 900,
+    },
+    'unlock-donor-accounts': {
+        'task': 'requests_app.tasks.unlock_donor_accounts',
+        'schedule': 3600,  # every hour
+    },
+    'expire-unvisited-donor-requests': {
+        'task': 'requests_app.tasks.expire_unvisited_donor_requests',
+        'schedule': 1800,  # every 30 minutes
+    },
+
+}
+
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+
+
 
 
 

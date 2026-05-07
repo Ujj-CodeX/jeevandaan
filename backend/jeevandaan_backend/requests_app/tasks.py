@@ -79,5 +79,6 @@ def unlock_donor_accounts():
     count = unlocked.count()
     unlocked.update(is_locked=False, locked_until=None)
     if count > 0:
-        print(f"{count} donor accounts unlocked!")
+        print(f"{count} donor accounts unlocked!") 
+
 
