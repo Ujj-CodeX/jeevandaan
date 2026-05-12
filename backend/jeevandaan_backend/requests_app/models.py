@@ -120,63 +120,7 @@ class OTPCode(models.Model):
                 return code
 
             
-class AttenderRating(models.Model):
-    RATING_CHOICES = [(i, i) for i in range(1, 6)]  # 1 to 5 stars
 
-    COMPLAINT_TYPES = [
-        ('exchange_condition', 'Asked for blood exchange'),
-        ('overcharging', 'Charged extra fees'),
-        ('misbehavior', 'Staff misbehavior'),
-        ('fake_stock', 'Showed wrong stock availability'),
-        ('other', 'Other'),
-    ]
-
-    # Who rated whom
-    attender = models.ForeignKey(
-        'users.Donor',
-        on_delete=models.CASCADE,
-        related_name='ratings_given'
-    )
-    partner = models.ForeignKey(
-        'partners.Partners',
-        on_delete=models.CASCADE,
-        related_name='ratings_received'
-    )
-    request = models.OneToOneField(
-        AttenderRequest,
-        on_delete=models.CASCADE,
-        related_name='rating'
-    )
-
-    # Rating
-    stars = models.IntegerField(choices=RATING_CHOICES)
-    review = models.TextField(blank=True, null=True)
-
-    # Complaint
-    has_complaint = models.BooleanField(default=False)
-    complaint_type = models.CharField(
-        max_length=50,
-        choices=COMPLAINT_TYPES,
-        blank=True,
-        null=True
-    )
-    complaint_detail = models.TextField(blank=True, null=True)
-    complaint_status = models.CharField(
-        max_length=20,
-        choices=[
-            ('pending', 'Pending'),
-            ('investigating', 'Investigating'),
-            ('resolved', 'Resolved'),
-            ('dismissed', 'Dismissed'),
-        ],
-        default='pending'
-    )
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.attender.name} rated {self.partner.hospital_name} — {self.stars}⭐"
     
 class InterPartnerRequest(models.Model):
     BLOOD_GROUPS = [

@@ -25,8 +25,8 @@ def expire_unvisited_donor_requests():
         ).exists()
 
         if not visited:
-            # ── FIX: pehle donor save karo, PHIR None karo ──
-            donor = req.assigned_donor  # ← pehle reference lo
+            
+            donor = req.assigned_donor  
 
             req.status = 'expired'
             req.assigned_donor = None   # ← ab None karo
