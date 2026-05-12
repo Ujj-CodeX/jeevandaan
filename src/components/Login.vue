@@ -193,7 +193,7 @@ forgotSuccess: null,
 
       try {
         const response = await api.post(
-          "https://jeevandaan-yaal.onrender.com/api/users/login/",
+          "http://43.204.39.169/api/users/login/",
           {
             username: this.username,
             password: this.password,
@@ -227,7 +227,7 @@ forgotSuccess: null,
     this.forgotError = null
 
     try {
-        await api.post('https://jeevandaan-yaal.onrender.com/api/users/forgot-password/', {
+        await api.post('http://43.204.39.169/api/users/forgot-password/', {
             email: this.forgotEmail
         })
         this.forgotStep = 2
@@ -249,7 +249,7 @@ async resetPassword() {
     this.forgotError = null
 
     try {
-        await api.post('https://jeevandaan-yaal.onrender.com/api/users/reset-password/', {
+        await api.post('http://43.204.39.169/api/users/reset-password/', {
             email: this.forgotEmail,
             otp: this.forgotOTP,
             new_password: this.forgotNewPassword

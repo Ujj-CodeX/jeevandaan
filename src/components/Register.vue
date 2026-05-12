@@ -185,7 +185,7 @@ export default {
             this.error = null
 
             try {
-                const response = await api.post('https://jeevandaan-yaal.onrender.com/api/users/register/', this.form)
+                const response = await api.post('http://43.204.39.169/api/users/register/', this.form)
 
                 // Store tokens
                 localStorage.setItem('access_token', response.data.tokens.access)

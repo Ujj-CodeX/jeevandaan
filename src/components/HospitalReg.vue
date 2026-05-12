@@ -266,7 +266,7 @@ export default {
             this.error = null
 
             try {
-                 await api.post('https://jeevandaan-yaal.onrender.com/api/partners/register/', this.form)
+                 await api.post('http://43.204.39.169/api/partners/register/', this.form)
 
                 
 

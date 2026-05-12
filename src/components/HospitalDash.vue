@@ -1164,7 +1164,7 @@ acceptingInterReq: null,
       this.loading = true
       this.error = null
       try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/profile/', 
+        const response = await api.get('http://43.204.39.169/api/partners/profile/', 
   )
        
         this.partner = response.data
@@ -1197,7 +1197,7 @@ acceptingInterReq: null,
 
     async fetchStock() {
       try {
-        const response = await api.get(`https://jeevandaan-yaal.onrender.com/api/stock/partner/${this.partner.id}/`)
+        const response = await api.get(`http://43.204.39.169/api/stock/partner/${this.partner.id}/`)
         Object.keys(this.stock).forEach(k => this.stock[k] = 0)
         response.data.forEach(item => {
           if (Object.prototype.hasOwnProperty.call(this.stock, item.blood_group)) {
@@ -1211,11 +1211,11 @@ acceptingInterReq: null,
 
     async buildOverviewStats() {
       try {
-        const donorReqs = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/donor/list/')
+        const donorReqs = await api.get('http://43.204.39.169/api/requests/donor/list/')
         const activeDonorReqs = donorReqs.data.filter(r => r.status === 'open').length
-        const attenderReqs = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/attender/list/')
+        const attenderReqs = await api.get('http://43.204.39.169/api/requests/attender/list/')
         const pendingAttenders = attenderReqs.data.length
-        const donations = await api.get('https://jeevandaan-yaal.onrender.com/api/donations/partner-history/')
+        const donations = await api.get('http://43.204.39.169/api/donations/partner-history/')
         const totalDonations = donations.data.length
         this.overviewStats = [
           { label: 'Active Donor Requests', val: `${activeDonorReqs} Active`,   color: 'text-sky' },
@@ -1240,7 +1240,7 @@ acceptingInterReq: null,
 
   try {
     await api.post(
-      'https://jeevandaan-yaal.onrender.com/api/stock/update/',
+      'http://43.204.39.169/api/stock/update/',
       {
         blood_group: bloodGroup,
         quantity: this.stock[bloodGroup]
@@ -1283,7 +1283,7 @@ acceptingInterReq: null,
       this.broadcastLoading = true
       this.donorRequestMessage = null
       try {
-        await api.post('https://jeevandaan-yaal.onrender.com/api/requests/donor/create/', {
+        await api.post('http://43.204.39.169/api/requests/donor/create/', {
           blood_group: this.donorRequest.blood_group,
           quantity: this.donorRequest.quantity
         })
@@ -1301,7 +1301,7 @@ acceptingInterReq: null,
     // ── KEY FIX: safe partner ID comparison handles both int and object formats
     async fetchActiveDonorRequests() {
   try {
-    const response = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/donor/detail/')
+    const response = await api.get('http://43.204.39.169/api/requests/donor/detail/')
 
     console.log("FULL RESPONSE:", response.data)
 
@@ -1324,7 +1324,7 @@ acceptingInterReq: null,
     async fetchAttenderRequests() {
       this.attenderLoading = true
       try {
-        const response = await api.get(`https://jeevandaan-yaal.onrender.com/api/requests/attender/list/?city=${this.partner.city}`)
+        const response = await api.get(`http://43.204.39.169/api/requests/attender/list/?city=${this.partner.city}`)
         this.attenderRequests = Array.isArray(response.data) ? response.data : []
       } catch (err) {
         this.attenderRequests = []
@@ -1344,7 +1344,7 @@ acceptingInterReq: null,
       this.searchResult = null
       this.searchError = null
       try {
-        const response = await api.get(`https://jeevandaan-yaal.onrender.com/api/requests/attender/${this.searchRefId}/`)
+        const response = await api.get(`http://43.204.39.169/api/requests/attender/${this.searchRefId}/`)
         this.searchResult = response.data
         if (this.searchResult.status === 'fulfilled') {
           this.searchError = 'This request has already been fulfilled.'
@@ -1369,7 +1369,7 @@ acceptingInterReq: null,
     async fulfillAttenderRequest(refId) {
       this.fulfillingRequest = true
       try {
-        await api.post(`https://jeevandaan-yaal.onrender.com/api/requests/attender/${refId}/fulfill/`)
+        await api.post(`http://43.204.39.169/api/requests/attender/${refId}/fulfill/`)
         this.searchResult = null
         this.searchRefId = ''
         this.donorRequestMessage = { type: 'success', text: 'Request marked as fulfilled successfully!  ' }
@@ -1387,7 +1387,7 @@ acceptingInterReq: null,
       this.otpResult = null
       this.otpError = null
       try {
-        const response = await api.post('https://jeevandaan-yaal.onrender.com/api/requests/verify-otp/', { otp_code: this.otpCode })
+        const response = await api.post('http://43.204.39.169/api/requests/verify-otp/', { otp_code: this.otpCode })
         this.otpResult = response.data
       } catch (err) {
         this.otpError = err.response?.data?.error || 'Invalid OTP. Please try again.'
@@ -1399,7 +1399,7 @@ acceptingInterReq: null,
     async confirmDonation(requestId) {
       this.confirmingDonation = true
       try {
-        await api.post(`https://jeevandaan-yaal.onrender.com/api/donations/verify/${requestId}/`)
+        await api.post(`http://43.204.39.169/api/donations/verify/${requestId}/`)
         this.verifySuccess = 'Donation confirmed successfully! Stock updated automatically '
         this.otpResult = null
         this.otpCode = ''
@@ -1416,7 +1416,7 @@ acceptingInterReq: null,
 
     async fetchRecentDonations() {
       try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/donations/partner-history/')
+        const response = await api.get('http://43.204.39.169/api/donations/partner-history/')
         this.recentDonations = Array.isArray(response.data) ? response.data : []
       } catch (err) {
         this.recentDonations = []
@@ -1426,7 +1426,7 @@ acceptingInterReq: null,
     async fetchNotifications() {
       this.notifsLoading = true
       try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/notifications/partner/')
+        const response = await api.get('http://43.204.39.169/api/notifications/partner/')
         this.notifs = Array.isArray(response.data) ? response.data : []
         this.unreadNotifs = this.notifs.filter(n => n.status === 'pending').length
       } catch (err) {
@@ -1438,7 +1438,7 @@ acceptingInterReq: null,
 
     async markNotifRead(notifId) {
       try {
-        await api.post(`https://jeevandaan-yaal.onrender.com/api/notifications/${notifId}/read/`)
+        await api.post(`http://43.204.39.169/api/notifications/${notifId}/read/`)
         const notif = this.notifs.find(n => n.id === notifId)
         if (notif) notif.status = 'delivered'
         this.unreadNotifs = this.notifs.filter(n => n.status === 'pending').length
@@ -1479,7 +1479,7 @@ acceptingInterReq: null,
       this.savingProfile = true
       this.profileMessage = null
       try {
-        const response = await api.put('https://jeevandaan-yaal.onrender.com/api/partners/profile/', this.profileForm)
+        const response = await api.put('http://43.204.39.169/api/partners/profile/', this.profileForm)
         this.partner = { ...this.partner, ...response.data }
         this.profileMessage = { type: 'success', text: 'Profile updated successfully!  ' }
         setTimeout(() => { this.profileMessage = null }, 3000)
@@ -1494,7 +1494,7 @@ acceptingInterReq: null,
       if (!navigator.geolocation) return
       navigator.geolocation.getCurrentPosition(async (pos) => {
         try {
-          await api.post('https://jeevandaan-yaal.onrender.com/api/partners/update-location/', { latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+          await api.post('http://43.204.39.169/api/partners/update-location/', { latitude: pos.coords.latitude, longitude: pos.coords.longitude })
         } catch (err) {
           console.error('Failed to save partner GPS:', err)
         }
@@ -1558,7 +1558,7 @@ async createCamp() {
     this.campError = null
 
     try {
-        await api.post('https://jeevandaan-yaal.onrender.com/api/partners/camps/create/', this.campForm)
+        await api.post('http://43.204.39.169/api/partners/camps/create/', this.campForm)
 
         this.campSuccess = 'Camp created! Click Notify to alert nearby donors.'
 
@@ -1588,7 +1588,7 @@ async createCamp() {
 async fetchCamps() {
     this.campsLoading = true
     try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/camps/')
+        const response = await api.get('http://43.204.39.169/api/partners/camps/')
         this.camps = Array.isArray(response.data) ? response.data : []
     } catch (err) {
         this.camps = []
@@ -1601,7 +1601,7 @@ async fetchCamps() {
 async scheduleAndNotify(campId) {
     this.notifyingCamp = campId
     try {
-        const response = await api.post(`https://jeevandaan-yaal.onrender.com/api/partners/camps/${campId}/notify/`)
+        const response = await api.post(`http://43.204.39.169/api/partners/camps/${campId}/notify/`)
         alert(`  ${response.data.message}`)
         await this.fetchCamps()
     } catch (err) {
@@ -1640,7 +1640,7 @@ async raiseInterPartnerRequest() {
 
     try {
         const response = await api.post(
-            'https://jeevandaan-yaal.onrender.com/api/partners/inter-request/',
+            'http://43.204.39.169/api/partners/inter-request/',
             this.interForm
         )
         this.interResult = response.data
@@ -1662,7 +1662,7 @@ async raiseInterPartnerRequest() {
 async fetchIncomingInterRequests() {
     this.interRequestsLoading = true
     try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/inter-requests/')
+        const response = await api.get('http://43.204.39.169/api/partners/inter-requests/')
         this.incomingInterRequests = Array.isArray(response.data)
             ? response.data : []
     } catch (err) {
@@ -1676,7 +1676,7 @@ async fetchIncomingInterRequests() {
 async acceptInterRequest(reqId) {
     this.acceptingInterReq = reqId
     try {
-        await api.post(`https://jeevandaan-yaal.onrender.com/api/partners/inter-requests/${reqId}/accept/`)
+        await api.post(`http://43.204.39.169/api/partners/inter-requests/${reqId}/accept/`)
         alert('Request fulfilled! Stock updated  ')
         await this.fetchIncomingInterRequests()
         await this.fetchStock()
@@ -1695,7 +1695,7 @@ async downloadEnrollments(camp) {
         const token = localStorage.getItem('access_token')
 
         const response = await fetch(
-            `https://jeevandaan-yaal.onrender.com/api/partners/camps/${camp.id}/download/`,
+            `http://43.204.39.169/api/partners/camps/${camp.id}/download/`,
             {
                 headers: {
                     'Authorization': `Bearer ${token}`

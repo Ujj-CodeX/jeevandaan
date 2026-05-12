@@ -1340,7 +1340,7 @@ enrolling: false,
         const lat = coords?.lat || ''
         const lng = coords?.lon || ''
 
-        const url = `https://jeevandaan-yaal.onrender.com/api/partners/nearby/?lat=${lat}&lng=${lng}&radius=20`
+        const url = `http://43.204.39.169/api/partners/nearby/?lat=${lat}&lng=${lng}&radius=20`
         const response = await fetch(url)
         const data = await response.json()
         console.log('Nearby partners data:', data)
@@ -1359,7 +1359,7 @@ async saveGPSLocation() {
     navigator.geolocation.getCurrentPosition(
         async (pos) => {
             try {
-                await api.post('https://jeevandaan-yaal.onrender.com/api/users/update-location/', {
+                await api.post('http://43.204.39.169/api/users/update-location/', {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude
                 })
@@ -1402,7 +1402,7 @@ getStockLabel(partner) {
 
       try {
         console.log("TOKEN BEFORE API CALL:", token)
-        const response = await fetch('https://jeevandaan-yaal.onrender.com/api/users/profile/', {
+        const response = await fetch('http://43.204.39.169/api/users/profile/', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -1440,7 +1440,7 @@ getStockLabel(partner) {
         const bg = encodeURIComponent(this.donor?.blood_group || '')
 
         // 2. Call API (backend already handles distance filtering)
-        const url = `https://jeevandaan-yaal.onrender.com/api/requests/donor/list/?blood_group=${bg}&lat=${lat}&lon=${lng}`
+        const url = `http://43.204.39.169/api/requests/donor/list/?blood_group=${bg}&lat=${lat}&lon=${lng}`
           console.log('CALLING URL:', url)    // ← add this
 
         const response = await api.get(url)
@@ -1502,7 +1502,7 @@ async acceptRequest(requestId) {
 
       const selected = this.partnerRequests.find(r => r.id === requestId)
         const response = await api.post(
-            `https://jeevandaan-yaal.onrender.com/api/requests/donor/${requestId}/accept/`
+            `http://43.204.39.169/api/requests/donor/${requestId}/accept/`
         )
 
 
@@ -1571,7 +1571,7 @@ goToChat() {
         const lng = coords?.lon || ''
 
         const response = await api.get(
-            `https://jeevandaan-yaal.onrender.com/api/partners/camps/nearby/?lat=${lat}&lng=${lng}`
+            `http://43.204.39.169/api/partners/camps/nearby/?lat=${lat}&lng=${lng}`
         )
         this.nearbyCamps = Array.isArray(response.data) ? response.data : []
     } catch (err) {
@@ -1595,7 +1595,7 @@ async enrollInCamp() {
     this.enrolling = true
     try {
         await api.post(
-            `https://jeevandaan-yaal.onrender.com/api/partners/camps/${this.selectedCamp.id}/enroll/`,
+            `http://43.204.39.169/api/partners/camps/${this.selectedCamp.id}/enroll/`,
             this.enrollForm
         )
         alert('Enrolled successfully! See you at the camp 🩸')
@@ -1614,7 +1614,7 @@ async enrollInCamp() {
   async fetchEnrolledCamps() {
   this.enrolledLoading = true;
   try {
-    const res = await api.get('https://jeevandaan-yaal.onrender.com/api/partners/camps/enrolled/');
+    const res = await api.get('http://43.204.39.169/api/partners/camps/enrolled/');
     
     this.enrolledCamps = res.data || []; 
   } catch (err) {
@@ -1629,7 +1629,7 @@ async enrollInCamp() {
     if (!confirm("Are you sure you want to cancel your enrollment for this camp?")) return;
     
     try {
-      await api.post(`https://jeevandaan-yaal.onrender.com/api/camps/${campId}/cancel/`, {}, {
+      await api.post(`http://43.204.39.169/api/camps/${campId}/cancel/`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       alert("Enrollment cancelled successfully.");
@@ -1673,7 +1673,7 @@ async submitRating() {
 
     try {
         await api.post(
-            `https://jeevandaan-yaal.onrender.com/api/requests/attender/${this.ratingForm.reference_id}/rate/`,
+            `http://43.204.39.169/api/requests/attender/${this.ratingForm.reference_id}/rate/`,
             {
                 stars: this.ratingForm.stars,
                 review: this.ratingForm.review,
@@ -1702,7 +1702,7 @@ async submitRating() {
 async fetchMyRequests() {
     this.myRequestsLoading = true
     try {
-        const response = await api.get('https://jeevandaan-yaal.onrender.com/api/requests/attender/my-requests/')
+        const response = await api.get('http://43.204.39.169/api/requests/attender/my-requests/')
         this.myRequests = Array.isArray(response.data) ? response.data : []
     } catch (err) {
         console.error('My requests fetch failed:', err)
