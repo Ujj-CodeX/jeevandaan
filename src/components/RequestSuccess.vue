@@ -201,12 +201,12 @@ export default {
                 const lng = coords?.lng || ''
                 const bg = encodeURIComponent(this.bloodGroup)
 
-                let url = `http://43.204.39.169/api/partners/nearby/?blood_group=${bg}&radius=${radius}`
+                let url = `https://api.jeevandaan.online/api/partners/nearby/?blood_group=${bg}&radius=${radius}`
                 if (lat && lng) {
                     url += `&lat=${lat}&lng=${lng}`
                 } else {
                     // Fallback to city search
-                    url = `http://43.204.39.169/api/partners/list/?city=${this.city}&blood_group=${bg}`
+                    url = `https://api.jeevandaan.online/api/partners/list/?city=${this.city}&blood_group=${bg}`
                 }
 
                 const response = await api.get(url)

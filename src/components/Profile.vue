@@ -217,7 +217,7 @@ passwordMessage: null,
   },
   methods: {
     async fetchUserProfile() {
-      const res = await api.get('http://43.204.39.169/api/users/profile/', {
+      const res = await api.get('https://api.jeevandaan.online/api/users/profile/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       this.user = res.data;
@@ -225,7 +225,7 @@ passwordMessage: null,
     async submitAadhaar() {
       if(this.aadhaarNumber.length !== 12) return alert("Invalid Aadhaar Number");
       try {
-        await api.post('http://43.204.39.169/api/users/verify-aadhaar/', { aadhaar_no: this.aadhaarNumber });
+        await api.post('https://api.jeevandaan.online/api/users/verify-aadhaar/', { aadhaar_no: this.aadhaarNumber });
         this.user.aadhaar_status = 'pending';
         alert("Aadhaar submitted. Verification is pending.");
       } catch (err) { alert("Submission failed."); }
@@ -241,7 +241,7 @@ passwordMessage: null,
     async updatePassword() {
       if(this.newPassword !== this.confirmNewPassword) return this.authError = "Passwords do not match";
       try {
-        await api.post('http://43.204.39.169/api/users/change-password/', { password: this.newPassword });
+        await api.post('https://api.jeevandaan.online/api/users/change-password/', { password: this.newPassword });
         alert("Password updated successfully!");
         this.showPasswordModal = false;
         this.identityConfirmed = false;
@@ -278,7 +278,7 @@ passwordMessage: null,
     this.passwordMessage = null
 
     try {
-        await api.post('http://43.204.39.169/api/users/change-password/', {
+        await api.post('https://api.jeevandaan.online/api/users/change-password/', {
             current_password: this.passwordForm.current_password,
             new_password: this.passwordForm.new_password
         })
@@ -320,7 +320,7 @@ logout() {
       address: this.user.address
     };
 
-    const res = await api.put('http://43.204.39.169/api/users/update-profile/', payload);
+    const res = await api.put('https://api.jeevandaan.online/api/users/update-profile/', payload);
 
     // Update local state (important)
     this.user = res.data;

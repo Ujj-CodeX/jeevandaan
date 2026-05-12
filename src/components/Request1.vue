@@ -836,7 +836,7 @@ export default {
                 }
 
                 const response = await api.post(
-                    'http://43.204.39.169/api/requests/attender/create/',
+                    'https://api.jeevandaan.online/api/requests/attender/create/',
                     this.form
                 )
 
