@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
 
+from config.logger import get_logger
+logger = get_logger(__name__)
+
 #helper function to generate JWT token
 load_dotenv()  
 def generate_jwt_token(donor_id):
@@ -42,7 +45,12 @@ class DonorRegisterView(APIView):
         if serializer.is_valid():
             donor = serializer.save()
             tokens = generate_jwt_token(donor.id)
+
+            logger.info("donor_registered", extra={"donor_id": donor.id, "blood_group": donor.blood_group})
+                  
             return Response({'message': 'Registration successful', 'tokens': tokens}, status=status.HTTP_201_CREATED)
+        
+        logger.warning("donor_registration_invalid", extra={"errors": serializer.errors})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
@@ -59,21 +67,28 @@ class DonorLoginView(APIView):
             try:
                 donor = Donor.objects.get(username=username)
             except Donor.DoesNotExist:
+                logger.warning("donor_login_user_not_found")
                 return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
             if not bcrypt.checkpw(password.encode(), donor.password.encode()):
+
+                logger.warning("donor_login_wrong_password", extra={"donor_id": donor.id})
+
                 return Response(
                 {'error': 'Invalid username or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
             if donor.is_locked:
+                logger.warning("donor_login_account_locked", extra={"donor_id": donor.id ,"locked_until": str(donor.locked_until)}) 
                 return Response(
                 {'error': 'Account locked. Please try again later.'},
                 status=status.HTTP_403_FORBIDDEN
             )
             
             tokens = generate_jwt_token(donor.id)
+
+            logger.info("donor_login_successful", extra={"donor_id": donor.id})
             return Response({
             'message': 'Login successful.',
             'tokens': tokens,
@@ -109,6 +124,8 @@ class UpdateDonorLocationView(APIView):
             lng = request.data.get('longitude')
 
             if not lat or not lng:
+
+                logger.warning("donor_location_update_missing_coords", extra = {"donor_id": donor.id}  )
                 return Response(
                     {'error': 'latitude and longitude required.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -118,10 +135,16 @@ class UpdateDonorLocationView(APIView):
             donor.longitude = lng
             donor.save()
 
+            logger.debug("donor_location_updated", extra={"donor_id": donor.id, "lat": str(lat), "lng": str(lng) })
+
             return Response({'message': 'Location updated '})
 
         
         except Donor.DoesNotExist:
+
+            logger.exception("donor_location_updated_failed", extra={"donor_id": donor.id})
+
+
             return Response({'error': 'Donor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -135,6 +158,10 @@ class ForgotPasswordView(APIView):
         email = request.data.get('email')
 
         if not email:
+
+            logger.warning("forgot_password_no_email")
+
+
             return Response(
                 {'error': 'Email is required.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -159,11 +186,21 @@ class ForgotPasswordView(APIView):
                 message=f'JeevanDaan+ Password Reset OTP: {otp}. Valid for 10 minutes.'
             )
 
+            logger.info("forgot_password_otp_sent", extra={
+                "donor_id": donor.id,
+            })
+
+
+
             return Response({
                 'message': 'OTP sent to your registered phone number.'
             })
 
         except Donor.DoesNotExist:
+
+            logger.warning("forgot_password_email_not_found")   
+
+
             return Response(
                 {'error': 'No account found with this email.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -180,6 +217,8 @@ class ResetPasswordView(APIView):
         new_password = request.data.get('new_password')
 
         if not all([email, otp, new_password]):
+
+            logger.warning("reset_password_missing_fields")
             return Response(
                 {'error': 'Email, OTP and new password are required.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -189,6 +228,8 @@ class ResetPasswordView(APIView):
         stored_otp = cache.get(f'reset_otp_{email}')
 
         if not stored_otp or stored_otp != otp:
+
+            logger.warning("reset_password_invalid_otp")
             return Response(
                 {'error': 'Invalid or expired OTP.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -199,6 +240,8 @@ class ResetPasswordView(APIView):
 
             # Validate new password
             if len(new_password) < 8:
+
+                logger.warning("reset_password_weak_password", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Password must be at least 8 characters.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -215,11 +258,14 @@ class ResetPasswordView(APIView):
             # Clear OTP
             cache.delete(f'reset_otp_{email}')
 
+            logger.info("reset_password_success", extra={"donor_id": donor.id})
+
             return Response({
                 'message': 'Password reset successfully!  '
             })
 
         except Donor.DoesNotExist:
+            logger.warning("reset_password_donor_not_found", extra={"email": email})
             return Response(
                 {'error': 'User not found.'},
                 status=status.HTTP_404_NOT_FOUND

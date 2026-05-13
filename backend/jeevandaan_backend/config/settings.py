@@ -219,6 +219,32 @@ CELERY_BEAT_SCHEDULE = {
 
 }
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s',
+            'rename_fields': {'asctime': 'timestamp', 'levelname': 'level', 'name': 'logger'},
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'django.request': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+    },
+}
+
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 
