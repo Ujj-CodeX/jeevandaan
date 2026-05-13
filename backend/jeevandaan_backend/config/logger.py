@@ -11,7 +11,7 @@ def get_logger(name: str) -> logging.Logger:
 
     logger = logging.getLogger(name)
     # avouid adding multiple handlers if the logger is already configured
-    if logger.handlers():
+    if logger.handlers:
         return logger
     logger.setLevel(logging.DEBUG)
 

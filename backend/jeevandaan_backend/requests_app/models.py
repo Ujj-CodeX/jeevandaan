@@ -230,6 +230,12 @@ class AttenderRating(models.Model):
         ],
         default='pending'
     )
+    fulfilled_by = models.ForeignKey(
+        'partners.Partners',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='fulfilled_requests'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
