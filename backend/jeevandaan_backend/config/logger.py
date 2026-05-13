@@ -3,7 +3,7 @@ import logging
 import sys
 from pythonjsonlogger import jsonlogger
 
-def get_logger(name: str) -> logging.logger:
+def get_logger(name: str) -> logging.Logger:
     """
     Returns a JSON logger for the given module name.
     Usage: logger = get_logger(__name__)
