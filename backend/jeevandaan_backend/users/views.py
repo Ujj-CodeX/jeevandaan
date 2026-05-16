@@ -285,6 +285,7 @@ class ChangePasswordView(APIView):
             new_password = request.data.get('new_password')
 
             if not all([current_password, new_password]):
+                logger.warning("change_password_missing_fields",extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Both passwords required.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -296,12 +297,14 @@ class ChangePasswordView(APIView):
                 current_password.encode(),
                 donor.password.encode()
             ):
+                logger.warning("change_password_wrong_current",extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Current password is incorrect.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             if len(new_password) < 8:
+                logger.warning("change_password_weak_new",extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'New password must be at least 8 characters.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -312,6 +315,8 @@ class ChangePasswordView(APIView):
                 bcrypt.gensalt()
             ).decode()
             donor.save()
+
+            logger.info("change_password_success",extra={"donor_id": donor.id})
 
             return Response({
                 'message': 'Password changed successfully! '
@@ -333,6 +338,8 @@ class VerifyAadhaarView(APIView):
 
             
             if not aadhaar_no:
+
+                logger.warning("aadhaar_submit_missing", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Aadhaar number is required.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -341,6 +348,7 @@ class VerifyAadhaarView(APIView):
             aadhaar_no = str(aadhaar_no).strip()
 
             if not aadhaar_no.isdigit() or len(aadhaar_no) != 12:
+                logger.warning("aadhaar_submit_invalid_format", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Invalid Aadhaar number. Must be 12 digits.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -348,6 +356,8 @@ class VerifyAadhaarView(APIView):
 
             
             if donor.is_aadhaar_verified:
+
+                logger.warning("aadhaar_already_verified", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Aadhaar already verified.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -355,6 +365,7 @@ class VerifyAadhaarView(APIView):
 
             
             if Donor.objects.filter(aadhaar_number=aadhaar_no).exclude(id=donor.id).exists():
+                logger.warning("aadhaar_duplicate_attempt", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'This Aadhaar is already linked with another account.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -365,12 +376,17 @@ class VerifyAadhaarView(APIView):
             donor.is_aadhaar_verified = False   
             donor.save()
 
+            logger.info("aadhaar_submitted_pending_verification", extra={
+                "donor_id": donor.id,
+            })
+
             return Response({
                 'message': 'Aadhaar submitted. Verification is pending.'
             })
 
 
         except Donor.DoesNotExist:
+            logger.exception("aadhaar_submit_unexpected_error", extra={"donor_id": getattr(request.user, 'id', None)})
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
         
 class UpdateProfileView(APIView):
@@ -390,9 +406,11 @@ class UpdateProfileView(APIView):
 
             
             if not name:
+                logger.warning("update_profile_missing_name", extra={"donor_id": donor.id})
                 return Response({'error': 'Name is required.'}, status=400)
 
             if blood_group not in dict(Donor.BLOOD_GROUPS):
+                logger.warning("update_profile_invalid_blood_group", extra={"donor_id": donor.id ,  "blood_group_verified": blood_group,})
                 return Response({'error': 'Invalid blood group.'}, status=400)
 
             
@@ -413,4 +431,9 @@ class UpdateProfileView(APIView):
 
 
         except Donor.DoesNotExist:
+            logger.exception("profile_update_unexpected_error", extra={"donor_id": getattr(request.user, 'id', None)})
+
+
+            #actually yaha pe Get attr wala stateement isliye use kr rhen in exception if in case agr donor.id bani he nhi 
+            #try block mein crash kr jaye so just to handle exception we gettattr(request.user--> object , attribute --> id , default --> None)
             return Response({'error': 'User not found.'}, status=404)
