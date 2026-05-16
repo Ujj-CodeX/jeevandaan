@@ -2,6 +2,11 @@ from .sms import send_sms, send_whatsapp
 from .models import Notification
 from django.utils import timezone
 
+from config.logger import get_logger
+ 
+
+logger = get_logger(__name__)
+
 
 def notify_donor(donor, trigger, message):
     """
@@ -9,7 +14,7 @@ def notify_donor(donor, trigger, message):
     Creates notification record in DB
     """
     if not donor.phone_number:
-        print(f"No phone number for donor {donor.name}")
+        logger.warning("donor_no_phone", extra={"donor_id": donor.id , "trigger": trigger   })
         return
 
     # Send SMS
@@ -49,8 +54,14 @@ def notify_donor(donor, trigger, message):
             is_fallback=True,
             fallback_attempted_at=timezone.now()
         )
-        print(f"Fallback call triggered for {donor.name} ⚠️")
-
+        logger.warning("sms_whatapp_both_failed_fallback_triggered", extra={"donor_id": donor.id, "trigger": trigger})
+        return
+    logger.debug("donor_notified", extra={
+        "donor_id":        donor.id,
+        "trigger":         trigger,
+        "sms_success":     sms_success,
+        "whatsapp_success": whatsapp_success,
+    })
 
 from geopy.distance import geodesic
 
@@ -69,7 +80,12 @@ def notify_nearby_donors(blood_group, partner_lat, partner_lng, message, radius_
         longitude__isnull=False,
     )
 
+    total_checked = 0
     notified = 0
+    failed = 0
+
+
+    logger.info("notifying_nearby_donors_started", extra={ "blood_group" : blood_group , "radius_km" : radius_km , "total_chekced" : total_checked, } )
     for donor in donors:
         try:
             donor_location = (float(donor.latitude), float(donor.longitude))
@@ -88,15 +104,41 @@ def notify_nearby_donors(blood_group, partner_lat, partner_lng, message, radius_
                 notified += 1
 
         except Exception as e:
-            print(f"Error notifying donor {donor.id}: {e}")
+            failed += 1
+
+            logger.exception("donor_notify_error", extra = {
+                "donor_id": donor.id,
+            })
             continue
 
-    print(f"Notified {notified} donors within {radius_km}km ✅")
+    logger.info("notify_nearby_donors_completed", extra={
+        "blood_group":   blood_group,
+        "radius_km":     radius_km,
+        "total_checked": total_checked,
+        "notified":      notified,
+        "failed":        failed,
+    })
     return notified
 
 def notify_camp_donors(camp):
     from users.models import Donor
     from users.location import get_nearby_donors
+
+    donors = Donor.objects.filter(
+        is_locked=False,
+        latitude__isnull=False,
+        longitude__isnull=False
+
+
+    )
+
+    if not camp.latitude or not camp.longitude:
+        logger.warning("camp_notify_skipper_no_location" ,  extra = {
+            "camp_id" : camp.id , 
+            "camp.title" : camp.title
+        })
+
+        return 0 
 
     donors = Donor.objects.filter(
         is_locked=False,
@@ -119,15 +161,36 @@ def notify_camp_donors(camp):
     message = f"A nearby blood donation camp is scheduled at {camp.location} on {camp.camp_date}. Timings: {camp.start_time}–{camp.end_time}. Enroll now via Dashboard!"
     notified = 0
 
+    logger.info("notify_camp_donors_started", extra={
+        "camp_id":            camp.id,
+        "camp_title":         camp.title,
+        "camp_date":          str(camp.camp_date),
+        "blood_groups_needed": camp.blood_groups_needed,
+        "nearby_donor_count": len(nearby),
+    })
+
     for item in nearby:
         donor = item['donor']   
-
-        notify_donor(
+        try:
+            notify_donor(
             donor=donor,
             trigger='camp_notification',
             message=message
         )
+            notified += 1
 
-        notified += 1
+        except Exception:
+            logger.exception("camp_donor_notify_error", extra={
+                "camp_id":  camp.id,
+                "donor_id": donor.id,
+            })
+            continue
+
+
+        logger.info("notify_camp_donors_completed", extra={
+        "camp_id":   camp.id,
+        "camp_title": camp.title,
+        "notified":  notified,
+    })
 
     return notified

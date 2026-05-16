@@ -437,3 +437,6 @@ class UpdateProfileView(APIView):
             #actually yaha pe Get attr wala stateement isliye use kr rhen in exception if in case agr donor.id bani he nhi 
             #try block mein crash kr jaye so just to handle exception we gettattr(request.user--> object , attribute --> id , default --> None)
             return Response({'error': 'User not found.'}, status=404)
+
+
+            

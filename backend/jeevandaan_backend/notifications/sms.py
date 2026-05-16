@@ -2,6 +2,8 @@ import os
 from twilio.rest import Client
 
 
+from config.logger import get_logger
+logger = get_logger(__name__)
 
 
 def get_twilio_client():
@@ -27,11 +29,11 @@ def send_sms(phone_number, message):
             to=phone_number
         )
 
-        print(f"SMS sent successfully to {phone_number}   SID: {msg.sid}")
+        logger.info("sms_sent", extra={"phone_number": phone_number, "sid": msg.sid})
         return True
 
     except Exception as e:
-        print(f"SMS error: {str(e)}")
+        logger.exception("sms_failed", extra={"phone_number": phone_number})
         return False
 
 
@@ -45,15 +47,21 @@ def send_whatsapp(phone_number, message):
         # Get sandbox number from dashboard exactly
         sandbox_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
 
+        if not sandbox_number:
+            logger.warning("whatsapp_sandbox_number_missing", extra={
+                "phone": phone_number,
+            })
+ 
+
         msg = client.messages.create(
             body=message,
             from_=f'whatsapp:{sandbox_number}',  
             to=f'whatsapp:{phone_number}'
         )
 
-        print(f"WhatsApp sent   SID: {msg.sid}")
+        logger.info("whatsapp_sent", extra={"phone_number": phone_number, "sid": msg.sid})
         return True
 
     except Exception as e:
-        print(f"WhatsApp error: {str(e)}")
+        logger.exception("whatsapp_failed", extra={"phone_number": phone_number})
         return False
