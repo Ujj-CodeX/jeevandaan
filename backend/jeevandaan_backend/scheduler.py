@@ -4,6 +4,11 @@ from django.utils import timezone
 
 from celery import shared_task
 
+from config.logger import get_logger
+ 
+
+logger = get_logger(__name__)
+
 @shared_task
 def expire_unvisited_donor_requests():
     from requests_app.models import PartnerDonorRequest
@@ -15,69 +20,122 @@ def expire_unvisited_donor_requests():
     assigned_requests = PartnerDonorRequest.objects.filter(
         status='assigned',
         updated_at__lte=two_hours_ago
+
+
+
     )
 
+    total = assigned_requests.count()
+    expired = 0
+    locked = 0
+
+
+    logger.info("expire_unvisited_donor_requests_started", extra={"total_assigned_requests": total})
+    
+
+
+
+
+
     for req in assigned_requests:
-        visited = Chat.objects.filter(
+        try:
+            visited = Chat.objects.filter(
             request=req,
             sender_type='donor',
             message__in=['reached', 'donated']
-        ).exists()
+             ).exists()
 
-        if not visited:
+            if not visited:
             
-            donor = req.assigned_donor  
+               donor = req.assigned_donor  
 
-            req.status = 'expired'
-            req.assigned_donor = None   # ← ab None karo
-            req.save()
+               req.status = 'expired'
+               req.assigned_donor = None   # ← ab None karo
+               req.save()
+
+               expired +=1 
 
             # ── Ab donor check karo ──
-            if donor:
-                donor.reliability_score = max(0, donor.reliability_score - 10)
-                donor.cancellation_count += 1
+               if donor:
+                    donor.reliability_score = max(0, donor.reliability_score - 10)
+                    donor.cancellation_count += 1
 
-                if donor.cancellation_count >= 3:
-                    donor.is_locked = True
-                    donor.locked_until = timezone.now() + timedelta(days=30)
+                    if donor.cancellation_count >= 3:
+                       donor.is_locked = True
+                       donor.locked_until = timezone.now() + timedelta(days=30)
+                       locked +=1
 
-                donor.save()
-                print(f"Request #{req.id} expired — donor {donor.name} score deducted")
+                       logger.warning("donor_account_locked_by_scheduler", extra={"donor_id": donor.id, "cancellation_count": donor.cancellation_count , "locked_until": str(donor.locked_until) , "request_id": req.id, })
+                    donor.save()
 
+                    logger.info("donor_score_deducted_unvisited", extra={"donor_id": donor.id,
+                        "request_id":        req.id,
+                        "new_score":         donor.reliability_score,
+                        "cancellation_count": donor.cancellation_count,})
+        except Exception :
+
+            logger.exception("expired_unvisited_request_error", extra={"request_id": req.id})
+
+            continue
+
+    logger.info("expire_unvisited_donor_requests_completed", extra={
+        "total_checked": total,
+        "expired":       expired,
+        "donors_locked": locked,
+    })
 
 @shared_task
 def expire_attender_requests():
     from requests_app.models import AttenderRequest
-    expired = AttenderRequest.objects.filter(
+
+    logger.info("expire_attender_requests_started")
+    
+
+    try:
+        expired = AttenderRequest.objects.filter(
         status='pending',
         expires_at__lt=timezone.now()
-    )
-    count = expired.count()
-    expired.update(status='expired')
-    if count > 0:
-        print(f"{count} attender requests expired!")
+        )
+        count = expired.count()
+        expired.update(status='expired')
+
+        logger.info("expire_attender_requests_completed", extra={"expired_count": count})
+    
+    except Exception :
+        logger.exception("expire_attender_requests_error")   
+    
 
 @shared_task
 def expire_donor_requests():
     from requests_app.models import PartnerDonorRequest
-    expired = PartnerDonorRequest.objects.filter(
+
+
+    logger.info("expire_donor_requests_started")
+    try:
+        expired = PartnerDonorRequest.objects.filter(
         status='open',
         expires_at__lt=timezone.now()
-    )
-    count = expired.count()
-    expired.update(status='expired')
-    if count > 0:
-        print(f"{count} donor requests expired!")
+        )
+        count = expired.count()
+        expired.update(status='expired')
+
+        logger.info("expire_donor_requests_completed", extra={"expired_count": count})
+    except Exception :
+        logger.exception("expire_donor_requests_error")
 
 @shared_task
 def unlock_donor_accounts():
     from users.models import Donor
-    unlocked = Donor.objects.filter(
-        is_locked=True,
-        locked_until__lt=timezone.now()
-    )
-    count = unlocked.count()
-    unlocked.update(is_locked=False, locked_until=None)
-    if count > 0:
-        print(f"{count} donor accounts unlocked!")
 
+    logger.info("unlock_donor_accounts_started")
+
+    try:
+        unlocked = Donor.objects.filter(
+         is_locked=True,
+         locked_until__lt=timezone.now()
+        )
+        count = unlocked.count()
+        unlocked.update(is_locked=False, locked_until=None)
+        logger.info("unlock_donor_accounts_completed", extra={"unlocked_count": count})
+    except Exception :      
+        logger.exception("unlock_donor_accounts_error")
