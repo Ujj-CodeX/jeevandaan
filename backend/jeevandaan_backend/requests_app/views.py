@@ -28,7 +28,9 @@ from config.permissions import IsPartner
 from config.authentication import AnyJWTAuthentication
 from config.permissions import IsAuthenticated
 
+from config.logger import get_logger
 
+logger = get_logger(__name__)
 # ─────────────────────────────────────────────────────────
 #  HELPER: run any callable in a daemon thread so it never
 #  blocks the HTTP response cycle.
@@ -51,6 +53,10 @@ class AttenderRequestCreateView(APIView):
 
         if not donor.is_aadhaar_verified:
             if donor.total_requests_raised >= 1:
+
+                logger.warning("attender_request_blocked_aadhaar_unverified", extra={
+                    "donor_id": donor.id
+                })
                 return Response(
                     {'error': 'Verify Aadhaar to raise more requests.'},
                     status=status.HTTP_403_FORBIDDEN
@@ -64,11 +70,25 @@ class AttenderRequestCreateView(APIView):
             donor.total_requests_raised += 1
             donor.save()
 
+            logger.info("attender_request_created", extra={
+                "donor_id":     donor.id,
+                "request_id":   str(req.reference_id),
+                "blood_group":  req.blood_group,
+                "urgency":      req.urgency,
+                "hospital_name": req.hospital_name,
+            })
+ 
+
             return Response({
                 'message': 'Request raised successfully.',
                 'reference_id': str(req.reference_id),
                 'request': AttenderRequestSerializer(req).data
             }, status=status.HTTP_201_CREATED)
+
+        logger.warning("attender_request_creation_invalid", extra={
+            "donor_id": donor.id,  
+              "errors" : serializer.errors
+        })
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -88,6 +108,9 @@ class AttenderRequestListView(APIView):
             requests = requests.filter(urgency=urgency)
         if blood_group:
             requests = requests.filter(blood_group=blood_group)
+        
+
+        # No logger to reduce noise on cloud watcher
 
         return Response(
             AttenderRequestPublicSerializer(requests, many=True).data
@@ -101,6 +124,8 @@ class AttenderRequestDetailView(APIView):
             req = AttenderRequest.objects.get(reference_id=reference_id)
             return Response(AttenderRequestSerializer(req).data)
         except AttenderRequest.DoesNotExist:
+            logger.warning("attender_request_not_found", extra={
+                "reference_id": reference_id        })
             return Response(
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -136,11 +161,23 @@ class PartnerDonorRequestCreateView(APIView):
                 radius_km=10,
             )
 
+            logger.info("partner_donor_request_created", extra={
+                "partner_id":   partner.id,
+                "request_id":   req.id,
+                "blood_group":  req.blood_group,
+                "quantity":     req.quantity,
+            })
+
+
             return Response({
                 'message': 'Donor request raised successfully.',
                 'request': PartnerDonorRequestSerializer(req).data
             }, status=status.HTTP_201_CREATED)
 
+        logger.warning("partner_donor_request_creation_invalid", extra={
+            "partner_id": partner.id,
+            "errors": serializer.errors
+        })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -295,8 +332,12 @@ class DonorRequestDetailView(APIView):
             })
 
         except PartnerDonorRequest.DoesNotExist:
+            logger.warning("donor_request_not_found", extra={
+                "request_id": request_id
+            })
             return Response({'error': 'Request not found.'}, status=404)
         except Exception as e:
+            logger.exception("donor_request_detail_error", extra={ "request_id": request_id })
             return Response({'error': str(e)}, status=500)
 
 
@@ -311,12 +352,21 @@ class DonorAcceptRequestView(APIView):
             donor = request.user
 
             if donor.is_locked:
+
+                logger.warning("donor_request_accept_blocked_locked", extra={
+                    "donor_id": donor.id ,
+                    "request_id": request_id
+                })
                 return Response(
                     {'error': 'Your account is locked.'},
                     status=status.HTTP_403_FORBIDDEN
                 )
             
             if not donor.is_aadhaar_verified:
+                logger.warning("donor_request_accept_blocked_aadhaar_unverified", extra={
+                    "donor_id": donor.id ,
+                    "request_id": request_id
+                })
                 return Response(
                     {'error': 'Aadhaar verification required to accept donation requests.'},
                     status=status.HTTP_403_FORBIDDEN
@@ -354,6 +404,14 @@ class DonorAcceptRequestView(APIView):
                 )
             run_in_background(_notify)
 
+            logger.info("donor_accepted_request", extra={
+                "donor_id":    donor.id,
+                "request_id":  req.id,
+                "partner_id":  req.partner.id,
+                "blood_group": req.blood_group,
+                "quantity":    req.quantity,
+            })
+
             return Response({
                 'message': 'Request accepted!',
                 'otp_code': otp.code,
@@ -361,14 +419,20 @@ class DonorAcceptRequestView(APIView):
             })
 
         except PartnerDonorRequest.DoesNotExist:
+            logger.warning("donor_request_not_found", extra={
+                "donor_id":   getattr(request.user, 'id', None),
+                "request_id": request_id,
+            })
             return Response(
                 {'error': 'Request not found or already assigned.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception :
+            logger.exception("donor_accept_request_error", extra={
+                "donor_id":   getattr(request.user, 'id', None),
+                "request_id": request_id,
+            })
+            return Response({'error': 'Something went wrong.'}, status=500)
 
 
 class DonorCancelRequestView(APIView):
@@ -387,13 +451,16 @@ class DonorCancelRequestView(APIView):
 
             reason = request.data.get('reason')
             if not reason:
+                logger.warning("donor_request_cancel_blocked_no_reason", extra={
+                    "donor_id": donor.id,
+                    "request_id": request_id})
                 return Response(
                     {'error': 'Cancellation reason is required.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             req.status = 'open'
-            req.assigned_donor = None
+            req.assigned_donor = None   
             req.cancellation_reason = reason
             req.save()
 
@@ -403,8 +470,22 @@ class DonorCancelRequestView(APIView):
             if donor.cancellation_count >= 3:
                 donor.is_locked = True
                 donor.locked_until = timezone.now() + timedelta(days=30)
-
+            
+            logger.warning("donor_locked_after_cancellations", extra={
+                    "donor_id":          donor.id,
+                    "cancellation_count": donor.cancellation_count,
+                    "locked_until":       str(donor.locked_until),
+                })
+            
             donor.save()
+
+            logger.info("donor_cancelled_request", extra={
+                "donor_id":          donor.id,
+                "request_id":        req.id,
+                "reason":            reason,
+                "new_score":         donor.reliability_score,
+                "cancellation_count": donor.cancellation_count,
+            })
 
             return Response({
                 'message': 'Request cancelled.',
@@ -412,6 +493,10 @@ class DonorCancelRequestView(APIView):
             })
 
         except PartnerDonorRequest.DoesNotExist:
+            logger.warning("donor_request_not_found", extra={
+                "donor_id":   getattr(request.user, 'id', None),
+                "request_id": request_id,
+            })
             return Response(
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -435,21 +520,35 @@ class FulfillAttenderRequestView(APIView):
             req.fulfilled_by = partner
             req.save()
 
+            logger.info("attender_request_fulfilled", extra={
+                "partner_id":   partner.id,
+                "reference_id": str(reference_id),
+                "blood_group":  req.blood_group,
+                "quantity":     req.quantity,
+            })
+
             return Response({
                 'message': 'Request fulfilled successfully!',
                 'reference_id': str(req.reference_id)
             })
 
         except AttenderRequest.DoesNotExist:
+
+            logger.warning("attender_fulfill_not_found", extra={
+                "partner_id":   getattr(request.user, 'id', None),
+                "reference_id": str(reference_id),
+            })
+
             return Response(
                 {'error': 'Request not found or already fulfilled.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+        except Exception:
+            logger.exception("attender_fulfill_error", extra={
+                "partner_id":   getattr(request.user, 'id', None),
+                "reference_id": str(reference_id),
+            })
+            return Response({'error': 'Something went wrong.'}, status=500)
 
 class GetRequestOTPView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
@@ -463,6 +562,14 @@ class GetRequestOTPView(APIView):
                 is_used=False,
                 request__partner=partner
             )
+
+            # WHY debug? → OTP fetch is read-only, high frequency during
+            # donation session. Info level pe bahut noise hoga.
+            logger.debug("otp_fetched", extra={
+                "partner_id": partner.id,
+                "request_id": request_id,
+            })
+
             return Response({'otp_code': otp.code})
 
         except OTPCode.DoesNotExist:
@@ -478,6 +585,9 @@ class VerifyOTPView(APIView):
             partner = request.user
             otp_code = request.data.get('otp_code')
             if not otp_code:
+                logger.warning("otp_verify_missing_code", extra={
+                    "partner_id": partner.id,
+                })
                 return Response(
                     {'error': 'OTP code is required.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -488,6 +598,10 @@ class VerifyOTPView(APIView):
                     code=otp_code, is_used=False, request__partner=partner
                 )
             except OTPCode.DoesNotExist:
+                
+                logger.warning("otp_verify_invalid", extra={
+                    "partner_id": partner.id,
+                })
                 return Response(
                     {'error': 'Invalid or already used OTP.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -497,6 +611,14 @@ class VerifyOTPView(APIView):
             otp.used_at = timezone.now()
             otp.save()
 
+             # Timeline: donor_accepted → otp_verified → donation_verified
+            logger.info("otp_verified_successfully", extra={
+                "partner_id":  partner.id,
+                "request_id":  otp.request.id,
+                "blood_group": otp.request.blood_group,
+                "quantity":    otp.request.quantity,
+            })
+
             return Response({
                 'message': 'OTP verified successfully!',
                 'request_id': otp.request.id,
@@ -504,11 +626,11 @@ class VerifyOTPView(APIView):
                 'quantity': otp.request.quantity,
             })
 
-        except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token expired.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+        except Exception:
+            logger.exception("otp_verify_error", extra={
+                "partner_id": getattr(request.user, 'id', None),
+            })
+            return Response({'error': 'Something went wrong.'}, status=500)
 
 class DonorPartnerRequestListView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
@@ -526,10 +648,11 @@ class DonorPartnerRequestListView(APIView):
             data = PartnerDonorRequestPublicSerializer(requests, many=True).data
             return Response(data)
 
-        except Partners.DoesNotExist:
-            return Response({'error': 'Partner not found.'}, status=404)
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
+        except Exception:
+            logger.exception("partner_donor_request_list_error", extra={
+                "partner_id": getattr(request.user, 'id', None),
+            })
+            return Response({"error": "Something went wrong."}, status=500)
 
 
 # ════════════════════════════════════════════════════
@@ -551,7 +674,22 @@ class SubmitAttenderRatingView(APIView):
                 status='fulfilled'
             )
 
+            if not req.fulfilled_by:
+                logger.warning("attender_rating_no_partner", extra={
+                    "donor_id":     donor.id,
+                    "reference_id": str(reference_id),
+                })
+                return Response(
+                    {'error': 'Request has no partner assigned. Cannot rate.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             if AttenderRating.objects.filter(request=req).exists():
+
+                logger.warning("attender_rating_already_submitted", extra={
+                    "donor_id":     donor.id,
+                    "reference_id": str(reference_id),
+                })
                 return Response(
                     {'error': 'Already rated this request.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -564,6 +702,11 @@ class SubmitAttenderRatingView(APIView):
             complaint_detail = request.data.get('complaint_detail', '')
 
             if not stars or int(stars) not in range(1, 6):
+
+                logger.warning("attender_rating_invalid_stars", extra={
+                    "donor_id":     donor.id,
+                    "stars_received": stars,
+                })
                 return Response(
                     {'error': 'Stars must be between 1 and 5.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -590,16 +733,41 @@ class SubmitAttenderRatingView(APIView):
                     rating.partner.is_live = False
                     rating.partner.save()
 
+                    logger.warning("partner_suspended_complaints", extra={
+                        "partner_id":  rating.partner.id,
+                        "bad_count":   bad_count,
+                        "trigger_donor": donor.id,
+                    })
+            
+            logger.info("attender_rating_submitted", extra={
+                "donor_id":       donor.id,
+                "partner_id":     req.fulfilled_by.id,
+                "reference_id":   str(reference_id),
+                "stars":          int(stars),
+                "has_complaint":  has_complaint,
+                "complaint_type": complaint_type if has_complaint else None,
+            })
+
             return Response({
                 'message': 'Rating submitted successfully!',
                 'stars': stars
             }, status=status.HTTP_201_CREATED)
 
         except AttenderRequest.DoesNotExist:
+            logger.warning("attender_rating_request_not_found", extra={
+                "donor_id":     getattr(request.user, 'id', None),
+                "reference_id": str(reference_id),
+            })
             return Response(
                 {'error': 'Fulfilled request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        except Exception:
+            logger.exception("attender_rating_error", extra={
+                "donor_id":     getattr(request.user, 'id', None),
+                "reference_id": str(reference_id),
+            })
+            return Response({'error': 'Something went wrong.'}, status=500)
 
 
 class SubmitDonorRatingView(APIView):
@@ -617,6 +785,10 @@ class SubmitDonorRatingView(APIView):
             )
 
             if DonorRating.objects.filter(request=req).exists():
+                logger.warning("donor_rating_already_submitted", extra={
+                    "donor_id": donor.id,
+                    "request_id": req.id
+                })
                 return Response(
                     {'error': 'You have already rated this request.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -626,6 +798,10 @@ class SubmitDonorRatingView(APIView):
             review = request.data.get('review', '')
 
             if stars not in range(1, 6):
+                logger.warning("donor_rating_invalid_stars", extra={
+                    "donor_id": donor.id,
+                    "stars_received": stars
+                })
                 return Response(
                     {'error': 'Stars must be between 1 and 5.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -649,15 +825,39 @@ class SubmitDonorRatingView(APIView):
                     partner.is_live = False
                     partner.save()
 
+                logger.warning("partner_suspended_low_donor_rating", extra={
+                    "partner_id": partner.id,               
+                    "bad_ratings": bad_ratings,
+                    "trigger_donor": donor.id,
+                })
+            
+
+            logger.info("donor_rating_submitted", extra={
+                "donor_id":   donor.id,
+                "partner_id": req.partner.id,
+                "request_id": request_id,
+                "stars":      stars,
+            })
             return Response({
                 'message': 'Rating submitted successfully! Thank you'
             }, status=status.HTTP_201_CREATED)
 
         except PartnerDonorRequest.DoesNotExist:
+            logger.warning("donor_rating_request_not_found", extra={
+                "donor_id":   getattr(request.user, 'id', None),
+                "request_id": request_id,
+            })
             return Response(
                 {'error': 'Fulfilled request not found or not assigned to you.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+ 
+        except Exception:
+            logger.exception("donor_rating_error", extra={
+                "donor_id":   getattr(request.user, 'id', None),
+                "request_id": request_id,
+            })
+            return Response({'error': 'Something went wrong.'}, status=500)
 
 
 class MyAttenderRequestsView(APIView):
@@ -698,8 +898,11 @@ class MyAttenderRequestsView(APIView):
 
             return Response(data)
 
-        except Donor.DoesNotExist:
+        except Exception:
+            logger.exception("my_attender_requests_error", extra={
+                "donor_id": getattr(request.user, 'id', None),
+            })
             return Response(
-                {'error': 'Donor not found.'},
-                status=status.HTTP_404_NOT_FOUND
+                {'error': 'Something went wrong.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
