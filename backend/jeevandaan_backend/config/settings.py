@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'django_apscheduler',  
     'config.apps.ConfigConfig',
+    'auth_tokens',
 
     
 ]
