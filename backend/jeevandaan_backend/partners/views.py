@@ -25,6 +25,7 @@ from config.authentication import PartnerJWTAuthentication
 from config.permissions import IsPartner
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
+from auth_token.helpers import generate_jwt_token   
 
 load_dotenv()
 
@@ -35,20 +36,7 @@ def run_in_background(fn, *args, **kwargs):
     t.start()
 
 
-# ── Token generation ──────────────────────────────────────
-def generate_partner_token(partner_id):
-    now = datetime.utcnow()
-    access_payload = {
-        'id': partner_id, 'type': 'partner',
-        'exp': now + timedelta(hours=1), 'iat': now,
-    }
-    refresh_payload = {
-        'id': partner_id, 'type': 'partner',
-        'exp': now + timedelta(days=7), 'iat': now,
-    }
-    access  = jwt.encode(access_payload,  os.getenv('SECRET_KEY'), algorithm='HS256')
-    refresh = jwt.encode(refresh_payload, os.getenv('SECRET_KEY'), algorithm='HS256')
-    return {'access': access, 'refresh': refresh}
+
 
 
 # ════════════════════════════════════════════════════════
@@ -188,7 +176,7 @@ class PartnerLoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        tokens = generate_partner_token(partner.id)
+        tokens = generate_jwt_token(partner.id, user_type='partner')
         return Response({
             'message': 'Login successful.',
             'tokens': tokens,

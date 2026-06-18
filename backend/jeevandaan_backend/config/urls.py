@@ -37,7 +37,7 @@ urlpatterns = [
     path('cron/expire-donor/', ExpireDonorRequestsView.as_view()),
     path('cron/unlock-donors/', UnlockDonorAccountsView.as_view()),
     path('cron/expire-unvisited/', ExpireUnvisitedDonorRequestsView.as_view()),
-    
+    path('api/auth/', include('auth_token.urls')),
 
     
 ]

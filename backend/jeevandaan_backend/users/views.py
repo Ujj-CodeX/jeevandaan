@@ -11,29 +11,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from dotenv import load_dotenv
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
+from auth_token.helpers import generate_jwt_token
 
 from config.logger import get_logger
 logger = get_logger(__name__)
 
 #helper function to generate JWT token
 load_dotenv()  
-def generate_jwt_token(donor_id):
-    access_payload = {
-        'id': donor_id,
-        'type': 'donor',
-        'exp': datetime.utcnow() + timedelta(hours=1),
-        'iat': datetime.utcnow(),
-    }
-    refresh_payload = {
-        'id': donor_id,
-        'type': 'donor',
-        'exp': datetime.utcnow() + timedelta(days=7),
-        'iat': datetime.utcnow(),
-    }
 
-    access =  jwt.encode(access_payload, os.getenv('SECRET_KEY'), algorithm='HS256')
-    refresh = jwt.encode(refresh_payload, os.getenv('SECRET_KEY'), algorithm='HS256')
-    return {'access': access, 'refresh': refresh}
 
 #register--------------------------------------------------------------------
 
@@ -44,7 +29,7 @@ class DonorRegisterView(APIView):
         serializer = DonorRegisterSerializer(data=request.data)
         if serializer.is_valid():
             donor = serializer.save()
-            tokens = generate_jwt_token(donor.id)
+            tokens = generate_jwt_token(donor.id,user_type='donor')
 
             logger.info("donor_registered", extra={"donor_id": donor.id, "blood_group": donor.blood_group})
                   
@@ -86,7 +71,7 @@ class DonorLoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
             
-            tokens = generate_jwt_token(donor.id)
+            tokens = generate_jwt_token(donor.id, user_type='donor')
 
             logger.info("donor_login_successful", extra={"donor_id": donor.id})
             return Response({
