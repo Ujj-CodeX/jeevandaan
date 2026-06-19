@@ -1646,7 +1646,7 @@ async enrollInCamp() {
 openRatingModal(partner) {
     this.ratingPartner = partner
     this.ratingForm = {
-        reference_id: req.reference_id || '',
+        reference_id: partner.reference_id || '',
         stars: 0,
         review: '',
         has_complaint: false,
