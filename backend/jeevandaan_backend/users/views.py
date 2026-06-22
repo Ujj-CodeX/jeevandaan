@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
 from auth_token.helpers import generate_jwt_token
+from rest_framework.throttling import ScopedRateThrottle
 
 from config.logger import get_logger
 logger = get_logger(__name__)
@@ -25,6 +26,8 @@ load_dotenv()
 class DonorRegisterView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'register'
     def post(self,request):
         serializer = DonorRegisterSerializer(data=request.data)
         if serializer.is_valid():
