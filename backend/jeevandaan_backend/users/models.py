@@ -44,3 +44,40 @@ class Donor(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.blood_group})"
+
+class LoginAttempt(models.Model):
+    """
+    Audit trail for login attempts — donor + partner both.
+    Generic 'username' field stores whatever identifier was typed
+    (username for donor, license_id for partner) so we don't need
+    two separate tables.
+    """
+    USER_TYPES = [
+        ('donor', 'Donor'),
+        ('partner', 'Partner'),
+    ]
+
+    REASON_CHOICES = [
+        ('success', 'Success'),
+        ('no_account', 'Account not found'),
+        ('invalid_password', 'Wrong password'),
+        ('locked', 'Account locked'),
+        ('not_verified', 'Partner not verified/live'),
+    ]
+
+    identifier = models.CharField(max_length=100)  # username or license_id typed
+    user_type = models.CharField(max_length=10, choices=USER_TYPES)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, null=True)
+    success = models.BooleanField(default=False)
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['identifier', 'created_at']),
+            models.Index(fields=['ip_address', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.identifier} ({self.user_type}) — {'OK' if self.success else self.reason} @ {self.created_at}"

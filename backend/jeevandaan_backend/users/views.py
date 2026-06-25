@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
-from .models import Donor
+from .models import Donor,LoginAttempt
 from .serializers import DonorRegisterSerializer, DonorLoginSerializer, DonorProfileSerializer
 import bcrypt
 import jwt
@@ -15,6 +15,9 @@ from auth_token.helpers import generate_jwt_token
 from rest_framework.throttling import ScopedRateThrottle
 
 from config.logger import get_logger
+from .utils import get_client_ip
+
+
 logger = get_logger(__name__)
 
 #helper function to generate JWT token
@@ -52,13 +55,32 @@ class DonorLoginView(APIView):
             username = serializer.validated_data['username']
             password = serializer.validated_data['password']
 
+            ip=get_client_ip(request)
+            ua=request.META.get('HTTP_USER_AGENT', '')[:255]
+
             try:
                 donor = Donor.objects.get(username=username)
             except Donor.DoesNotExist:
+                LoginAttempt.objects.create(
+                    identifier=username,
+                    user_type='donor',
+                    ip_address=ip,
+                    user_agent=ua,
+                    success=False,
+                    reason='no_account'
+                )
                 logger.warning("donor_login_user_not_found")
                 return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
             if not bcrypt.checkpw(password.encode(), donor.password.encode()):
+                LoginAttempt.objects.create(
+                    identifier=username,
+                    user_type='donor',
+                    ip_address=ip,
+                    user_agent=ua,
+                    success=False,
+                    reason='invalid_password'
+                )
 
                 logger.warning("donor_login_wrong_password", extra={"donor_id": donor.id})
 
@@ -66,14 +88,36 @@ class DonorLoginView(APIView):
                 {'error': 'Invalid username or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+            if not bcrypt.checkpw(password.encode(), donor.password.encode()):
+                # ── AUDIT: wrong password
+                LoginAttempt.objects.create(
+                    identifier=username, user_type='donor',
+                    ip_address=ip, user_agent=ua,
+                    success=False, reason='invalid_password'
+                )
+                return Response(
+                    {'error': 'Invalid username or password.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
 
             if donor.is_locked:
+
+                LoginAttempt.objects.create(
+                    identifier=username, user_type='donor',
+                    ip_address=ip, user_agent=ua,
+                    success=False, reason='locked'
+                ) 
+
                 logger.warning("donor_login_account_locked", extra={"donor_id": donor.id ,"locked_until": str(donor.locked_until)}) 
                 return Response(
                 {'error': 'Account locked. Please try again later.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-            
+            LoginAttempt.objects.create(
+                identifier=username, user_type='donor',
+                ip_address=ip, user_agent=ua,
+                success=True, reason='success'
+            )
             tokens = generate_jwt_token(donor.id, user_type='donor')
 
             logger.info("donor_login_successful", extra={"donor_id": donor.id})
