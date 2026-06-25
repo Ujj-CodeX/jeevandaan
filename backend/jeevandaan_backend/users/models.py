@@ -63,6 +63,7 @@ class LoginAttempt(models.Model):
         ('invalid_password', 'Wrong password'),
         ('locked', 'Account locked'),
         ('not_verified', 'Partner not verified/live'),
+        ('rate_limited', 'Rate limited'),
     ]
 
     identifier = models.CharField(max_length=100)  # username or license_id typed

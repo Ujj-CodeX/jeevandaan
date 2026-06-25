@@ -17,6 +17,12 @@ from rest_framework.throttling import ScopedRateThrottle
 from config.logger import get_logger
 from .utils import get_client_ip
 
+from django.core.cache import cache
+from rest_framework.throttling import ScopedRateThrottle
+
+LOGIN_FAIL_LIMIT = 5          
+LOGIN_FAIL_WINDOW = 5 * 60  
+
 
 logger = get_logger(__name__)
 
@@ -49,6 +55,10 @@ class DonorRegisterView(APIView):
 class DonorLoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]   
+    throttle_scope = 'login'
+
+
     def post(self, request):
         serializer = DonorLoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -57,10 +67,26 @@ class DonorLoginView(APIView):
 
             ip=get_client_ip(request)
             ua=request.META.get('HTTP_USER_AGENT', '')[:255]
+            
+            # ── ACCOUNT-LEVEL LOCKOUT CHECK (before touching DB/password) ──
+            fail_key = f'login_fail_{username}'
+            fail_count = cache.get(fail_key, 0)
+
+            if fail_count >= LOGIN_FAIL_LIMIT:
+                LoginAttempt.objects.create(
+                    identifier=username, user_type='donor',
+                    ip_address=ip, user_agent=ua,
+                    success=False, reason='rate_limited'
+                )
+                return Response(
+                    {'error': 'Too many failed attempts. Try again after 5 minutes.'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
 
             try:
                 donor = Donor.objects.get(username=username)
             except Donor.DoesNotExist:
+                cache.set(fail_key, fail_count + 1, timeout=LOGIN_FAIL_WINDOW)
                 LoginAttempt.objects.create(
                     identifier=username,
                     user_type='donor',
@@ -113,6 +139,10 @@ class DonorLoginView(APIView):
                 {'error': 'Account locked. Please try again later.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+            cache.delete(fail_key)
+
+            
             LoginAttempt.objects.create(
                 identifier=username, user_type='donor',
                 ip_address=ip, user_agent=ua,

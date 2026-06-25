@@ -186,7 +186,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [],
     'DEFAULT_THROTTLE_CLASSES': [],
     'DEFAULT_THROTTLE_RATES': {
-        'register': '5/hour',   # per-IP cap on registration attempts — blocks enumeration/spam
+        'register': '5/hour',
+        'login': '5/min',   # per-IP cap on registration attempts — blocks enumeration/spam
     }
 
 }
