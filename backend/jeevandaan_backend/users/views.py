@@ -21,7 +21,7 @@ from django.core.cache import cache
 from rest_framework.throttling import ScopedRateThrottle
 
 LOGIN_FAIL_LIMIT = 5          
-LOGIN_FAIL_WINDOW = 5 * 60  
+LOGIN_FAIL_WINDOW = 15 * 60  
 
 
 logger = get_logger(__name__)
