@@ -58,17 +58,15 @@ class DonorLoginView(APIView):
     throttle_classes = [ScopedRateThrottle]   
     throttle_scope = 'login'
 
-
     def post(self, request):
         serializer = DonorLoginSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
             password = serializer.validated_data['password']
 
-            ip=get_client_ip(request)
-            ua=request.META.get('HTTP_USER_AGENT', '')[:255]
-            
-            # ── ACCOUNT-LEVEL LOCKOUT CHECK (before touching DB/password) ──
+            ip = get_client_ip(request)
+            ua = request.META.get('HTTP_USER_AGENT', '')[:255]
+
             fail_key = f'login_fail_{username}'
             fail_count = cache.get(fail_key, 0)
 
@@ -79,7 +77,7 @@ class DonorLoginView(APIView):
                     success=False, reason='rate_limited'
                 )
                 return Response(
-                    {'error': 'Too many failed attempts. Try again after 5 minutes.'},
+                    {'error': 'Too many failed attempts. Try again after 15 minutes.'},
                     status=status.HTTP_429_TOO_MANY_REQUESTS
                 )
 
@@ -88,35 +86,16 @@ class DonorLoginView(APIView):
             except Donor.DoesNotExist:
                 cache.set(fail_key, fail_count + 1, timeout=LOGIN_FAIL_WINDOW)
                 LoginAttempt.objects.create(
-                    identifier=username,
-                    user_type='donor',
-                    ip_address=ip,
-                    user_agent=ua,
-                    success=False,
-                    reason='no_account'
+                    identifier=username, user_type='donor',
+                    ip_address=ip, user_agent=ua,
+                    success=False, reason='no_account'
                 )
                 logger.warning("donor_login_user_not_found")
                 return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            if not bcrypt.checkpw(password.encode(), donor.password.encode()):
-                LoginAttempt.objects.create(
-                    identifier=username,
-                    user_type='donor',
-                    ip_address=ip,
-                    user_agent=ua,
-                    success=False,
-                    reason='invalid_password'
-                )
-
-                logger.warning("donor_login_wrong_password", extra={"donor_id": donor.id})
-
-                return Response(
-                {'error': 'Invalid username or password.'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            # ── SIRF YEH EK BLOCK RAKHO (cache.set wala) ──
             if not bcrypt.checkpw(password.encode(), donor.password.encode()):
                 cache.set(fail_key, fail_count + 1, timeout=LOGIN_FAIL_WINDOW)
-                # ── AUDIT: wrong password
                 LoginAttempt.objects.create(
                     identifier=username, user_type='donor',
                     ip_address=ip, user_agent=ua,
@@ -129,35 +108,31 @@ class DonorLoginView(APIView):
                 )
 
             if donor.is_locked:
-
                 LoginAttempt.objects.create(
                     identifier=username, user_type='donor',
                     ip_address=ip, user_agent=ua,
                     success=False, reason='locked'
-                ) 
-
-                logger.warning("donor_login_account_locked", extra={"donor_id": donor.id ,"locked_until": str(donor.locked_until)}) 
+                )
+                logger.warning("donor_login_account_locked", extra={"donor_id": donor.id, "locked_until": str(donor.locked_until)})
                 return Response(
-                {'error': 'Account locked. Please try again later.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+                    {'error': 'Account locked. Please try again later.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
             cache.delete(fail_key)
 
-            
             LoginAttempt.objects.create(
                 identifier=username, user_type='donor',
                 ip_address=ip, user_agent=ua,
                 success=True, reason='success'
             )
             tokens = generate_jwt_token(donor.id, user_type='donor')
-
             logger.info("donor_login_successful", extra={"donor_id": donor.id})
             return Response({
-            'message': 'Login successful.',
-            'tokens': tokens,
-            'donor': DonorProfileSerializer(donor).data
-        })
+                'message': 'Login successful.',
+                'tokens': tokens,
+                'donor': DonorProfileSerializer(donor).data
+            })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DonorProfileView(APIView):
