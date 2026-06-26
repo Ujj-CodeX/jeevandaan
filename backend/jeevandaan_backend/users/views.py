@@ -115,12 +115,14 @@ class DonorLoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
             if not bcrypt.checkpw(password.encode(), donor.password.encode()):
+                cache.set(fail_key, fail_count + 1, timeout=LOGIN_FAIL_WINDOW)
                 # ── AUDIT: wrong password
                 LoginAttempt.objects.create(
                     identifier=username, user_type='donor',
                     ip_address=ip, user_agent=ua,
                     success=False, reason='invalid_password'
                 )
+                logger.warning("donor_login_wrong_password", extra={"donor_id": donor.id})
                 return Response(
                     {'error': 'Invalid username or password.'},
                     status=status.HTTP_401_UNAUTHORIZED
