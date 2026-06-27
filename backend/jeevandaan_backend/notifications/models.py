@@ -21,7 +21,8 @@ class Notification(models.Model):
         ('donor_accepted', 'Donor Accepted'),       # donor accepted request
         ('bank_verified', 'Bank Verified'),         # bank verified donation
         ('score_updated', 'Score Updated'),         # donor score changed
-        ('account_locked', 'Account Locked'),       # donor account locked
+        ('account_locked', 'Account Locked'),
+        ('password_reset', 'Password Reset'),       # donor account locked
     ]
 
     donor = models.ForeignKey('users.Donor', related_name='notifications', on_delete=models.CASCADE, null=True, blank=True)  # who receives the notification
