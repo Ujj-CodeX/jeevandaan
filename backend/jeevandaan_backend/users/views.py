@@ -188,10 +188,16 @@ class UpdateDonorLocationView(APIView):
 
 
 import random
+import secrets
+from .utils import hash_email_for_cache
 
 class ForgotPasswordView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+
+    OTP_TTL = 600
+    RATE_WINDOW = 3600
+    RATE_MAX = 3
 
     def post(self, request):
         email = request.data.get('email')
@@ -205,23 +211,36 @@ class ForgotPasswordView(APIView):
                 {'error': 'Email is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        email_key = hash_email_for_cache(email)
+        from django.core.cache import cache
+
+        rate_key = f'otp_rate_{email_key}'
+        sent_count = cache.get(rate_key, 0)
+
+        if sent_count >= self.RATE_MAX:
+            return Response(
+                {'error': 'Too many OTP requests. Try again later.'},   
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
 
         try:
             donor = Donor.objects.get(email=email)
 
             # Generate 6 digit OTP
-            otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            otp = ''.join(secrets.choice('0123456789') for _ in range(6))
 
             # Store in cache or temp model
             
             from django.core.cache import cache
-            cache.set(f'reset_otp_{email}', otp, timeout=600)  # 10 mins
+            cache.set(f'reset_otp_{email}', otp, timeout=self.OTP_TTL) 
+            cache.delete(f'otp_wrong_{email_key}')  # fresh OTP = reset wrong-attempt counter
+            cache.set(rate_key, sent_count + 1, timeout=self.RATE_WINDOW) # 10 mins
 
             # Send via SMS
             from notifications.helpers import notify_donor
             notify_donor(
                 donor=donor,
-                trigger='account_locked',
+                trigger='password_reset',
                 message=f'JeevanDaan+ Password Reset OTP: {otp}. Valid for 10 minutes.'
             )
 
@@ -239,7 +258,7 @@ class ForgotPasswordView(APIView):
 
             logger.warning("forgot_password_email_not_found")   
 
-
+            cache.set(rate_key, sent_count + 1, timeout=self.RATE_WINDOW)  # still count, avoids easy enumeration spam
             return Response(
                 {'error': 'No account found with this email.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -249,6 +268,10 @@ class ForgotPasswordView(APIView):
 class ResetPasswordView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+
+    MAX_WRONG_ATTEMPTS = 5
+    LOCK_TTL = 900  # 15 min — same window as your login
+
 
     def post(self, request):
         email = request.data.get('email')
@@ -262,13 +285,26 @@ class ResetPasswordView(APIView):
                 {'error': 'Email, OTP and new password are required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        email_key = hash_email_for_cache(email)
 
         from django.core.cache import cache
+
+        wrong_key = f'otp_wrong_{email_key}'
+        wrong_attempts = cache.get(wrong_key, 0)
+
+        if wrong_attempts >= self.MAX_WRONG_ATTEMPTS:
+            logger.warning("reset_password_too_many_wrong_attempts")
+            return Response(
+                {'error': 'Too many wrong OTP attempts. Try again after 15 minutes.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
         stored_otp = cache.get(f'reset_otp_{email}')
 
         if not stored_otp or stored_otp != otp:
 
+
             logger.warning("reset_password_invalid_otp")
+            cache.set(wrong_key, wrong_attempts + 1, timeout=self.LOCK_TTL)
             return Response(
                 {'error': 'Invalid or expired OTP.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -296,6 +332,8 @@ class ResetPasswordView(APIView):
 
             # Clear OTP
             cache.delete(f'reset_otp_{email}')
+            cache.delete(wrong_key)
+            cache.delete(f'otp_rate_{email_key}')  # reset rate limit after successful reset
 
             logger.info("reset_password_success", extra={"donor_id": donor.id})
 
