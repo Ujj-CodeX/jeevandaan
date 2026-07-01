@@ -19,7 +19,7 @@ import jwt
 import os
 import threading
 from datetime import datetime, timedelta, date
-from users.location import get_nearby_partners, get_nearby_donors
+from users.location import get_nearby_partners, get_nearby_donors, get_cache_key
 from stock.models import Stock
 
 from config.authentication import PartnerJWTAuthentication
@@ -67,6 +67,12 @@ class NearbyPartnersView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        cache_key = get_cache_key(lat, lng, blood_group, radius)
+        cached_result = cache.get(cache_key)
+
+        if cached_result is not None:
+            return Response(cached_result)
+
         partners = Partners.objects.filter(
             is_live=True, is_verified=True,
             latitude__isnull=False, longitude__isnull=False,
@@ -91,7 +97,7 @@ class NearbyPartnersView(APIView):
                 partner_data['available_units'] = stock_dict or None
 
             result.append(partner_data)
-
+        cache.set(cache_key, result, timeout=120)  # Cache for 5 minutes
         return Response(result)
 
 

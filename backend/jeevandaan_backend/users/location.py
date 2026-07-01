@@ -3,6 +3,9 @@
 # This drastically reduces CPU work and prevents worker SIGKILL on Render.
 
 from geopy.distance import geodesic
+import hashlib
+from django.core.cache import cache
+
 
 
 def _bounding_box(lat, lng, radius_km):
@@ -99,3 +102,14 @@ def get_nearby_donors(lat, lng, donors_qs, radius_km=10):
 
     result.sort(key=lambda x: x['distance_km'])
     return result
+
+def get_cache_key(lat, lng, blood_group, radius):
+    """
+    Builds a stable cache key for nearby-partner lookups.
+    
+    """
+    lat_r = round(float(lat), 3)
+    lng_r = round(float(lng), 3)
+    bg = blood_group or 'any'   
+    raw = f"nearby_partners:{lat_r}:{lng_r}:{bg}:{radius}"
+    return hashlib.sha256(raw.encode()).hexdigest()
