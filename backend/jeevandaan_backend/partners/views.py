@@ -12,6 +12,7 @@ from .serializers import (
     PartnerPublicSerializer,
     DonationCampSerializer,
     CampEnrollmentSerializer,
+    PartnerUpdateProfileSerializer,
 )
 import bcrypt
 import jwt
@@ -267,15 +268,9 @@ class PartnerProfileView(APIView):
 
     def put(self, request):
         partner = request.user
-        allowed_fields = [
-            'hospital_name', 'contact', 'address',
-            'city', 'state', 'facility',
-            'convenience_fee', 'fee_description',
-        ]
-        for field in allowed_fields:
-            if field in request.data:
-                setattr(partner, field, request.data[field])
-        partner.save()
+        serializer = PartnerUpdateProfileSerializer(partner, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(PartnerProfileSerializer(partner).data)
 
 

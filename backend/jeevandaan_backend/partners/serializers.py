@@ -121,3 +121,13 @@ class CampEnrollmentSerializer(serializers.ModelSerializer):
             'attended', 'enrolled_at'
         ]
         read_only_fields = ['attended', 'enrolled_at']
+
+class PartnerUpdateProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Partners
+        fields = [
+            'hospital_name', 'contact', 'address',
+            'city', 'state', 'facility',
+            'convenience_fee', 'fee_description'
+        ]
+        
