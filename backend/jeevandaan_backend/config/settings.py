@@ -223,6 +223,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'requests_app.tasks.expire_unvisited_donor_requests',
         'schedule': 1800,  # every 30 minutes
     },
+    'auto-complete-expired-camps': {
+        'task': 'partners.tasks.auto_complete_expired_camps',
+        'schedule': 900.0,  # 15 min
+    },
+
 
 }
 

@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Stock
+from .models import Stock, StockUpdateLog
 from .serializers import StockSerializer
 import jwt
 import os
@@ -39,7 +39,16 @@ class StockUpdateView(APIView):
                 partner_id=partner_id,
                 blood_group=blood_group,
                 defaults={'quantity': quantity}
+
             )
+
+            StockUpdateLog.objects.create(
+                partner=partner,
+                blood_group=blood_group,
+                quantity=quantity
+            )
+
+
 
             return Response({
                 'message': 'Stock updated successfully.',
