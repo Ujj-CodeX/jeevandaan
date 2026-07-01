@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from .models import Donor,LoginAttempt
-from .serializers import DonorRegisterSerializer, DonorLoginSerializer, DonorProfileSerializer
+from .serializers import DonorRegisterSerializer, DonorLoginSerializer, DonorProfileSerializer, UpdateProfileSerializer
 import bcrypt
 import jwt
 import os
@@ -471,49 +471,26 @@ class UpdateProfileView(APIView):
     permission_classes = [IsDonor]
 
     def put(self, request):
-        try:
-            
-            donor = request.user
+        donor = request.user
 
-        
-            name = request.data.get('name')
-            phone = request.data.get('phone_number')
-            blood_group = request.data.get('blood_group')
-            address = request.data.get('address')
+        serializer = UpdateProfileSerializer(
+            donor, data=request.data, partial=True
+        )
 
-            
-            if not name:
-                logger.warning("update_profile_missing_name", extra={"donor_id": donor.id})
-                return Response({'error': 'Name is required.'}, status=400)
+        if not serializer.is_valid():
+            logger.warning(
+                "update_profile_invalid",
+                extra={"donor_id": donor.id, "errors": serializer.errors}
+            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            if blood_group not in dict(Donor.BLOOD_GROUPS):
-                logger.warning("update_profile_invalid_blood_group", extra={"donor_id": donor.id ,  "blood_group_verified": blood_group,})
-                return Response({'error': 'Invalid blood group.'}, status=400)
+        serializer.save()
+        logger.info("profile_updated", extra={"donor_id": donor.id})
 
-            
-            donor.name = name
-            donor.phone_number = phone
-            donor.blood_group = blood_group
-            donor.address = address
-            donor.save()
-
-    
-            return Response({
-                'name': donor.name,
-                'email': donor.email,
-                'phone_number': donor.phone_number,
-                'blood_group': donor.blood_group,
-                'address': donor.address
-            })
-
-
-        except Donor.DoesNotExist:
-            logger.exception("profile_update_unexpected_error", extra={"donor_id": getattr(request.user, 'id', None)})
-
-
-            #actually yaha pe Get attr wala stateement isliye use kr rhen in exception if in case agr donor.id bani he nhi 
-            #try block mein crash kr jaye so just to handle exception we gettattr(request.user--> object , attribute --> id , default --> None)
-            return Response({'error': 'User not found.'}, status=404)
-
-
-            
+        return Response({
+            'name': donor.name,
+            'email': donor.email,
+            'phone_number': donor.phone_number,
+            'blood_group': donor.blood_group,
+            'address': donor.address
+        })

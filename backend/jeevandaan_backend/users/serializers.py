@@ -40,7 +40,28 @@ class DonorProfileSerializer(serializers.ModelSerializer):
         model = Donor
         exclude = ['password', 'aadhaar_number']
 
-        
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Donor
+        fields = ['name', 'phone_number', 'address', 'blood_group']
+
+    def validate_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Name cannot be empty.")
+        return value.strip()
+
+    def validate_phone_number(self, value):
+        if value and (not value.isdigit() or len(value) != 10):
+            raise serializers.ValidationError("Phone number must be 10 digits.")
+        return value
+
+    def validate_blood_group(self, value):
+        donor = self.instance
+        if donor and donor.is_aadhaar_verified and value != donor.blood_group:
+            raise serializers.ValidationError(
+                "Blood group cannot be changed after Aadhaar verification."
+            )
+        return value      
 
         
 
