@@ -25,7 +25,15 @@ from config.authentication import PartnerJWTAuthentication
 from config.permissions import IsPartner
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
-from auth_token.helpers import generate_jwt_token   
+from auth_token.helpers import generate_jwt_token  
+
+from django.core.cache import cache
+from users.models import LoginAttempt
+from users.utils import get_client_ip
+
+PARTNER_LOGIN_FAIL_LIMIT = 5
+PARTNER_LOGIN_FAIL_WINDOW = 15 * 60 
+
 
 load_dotenv()
 
@@ -144,10 +152,12 @@ class PartnerRegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+from rest_framework.throttling import ScopedRateThrottle
 class PartnerLoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'  
 
     def post(self, request):
         serializer = PartnerLoginSerializer(data=request.data)
@@ -156,25 +166,66 @@ class PartnerLoginView(APIView):
         license_id = serializer.validated_data['license_id']
         password   = serializer.validated_data['password']
 
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')[:255]
+
+        # ── per-license_id lockout check ──
+        fail_key = f'login_fail_partner_{license_id}'
+        fail_count = cache.get(fail_key, 0)
+
+        if fail_count >= PARTNER_LOGIN_FAIL_LIMIT:
+            LoginAttempt.objects.create(
+                identifier=license_id, user_type='partner',
+                ip_address=ip, user_agent=ua,
+                success=False, reason='rate_limited'
+            )
+            return Response(
+                {'error': 'Too many failed attempts. Try again after 15 minutes.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
         try:
             partner = Partners.objects.get(license_id=license_id)
         except Partners.DoesNotExist:
+            cache.set(fail_key, fail_count + 1, timeout=PARTNER_LOGIN_FAIL_WINDOW)
+            LoginAttempt.objects.create(
+                identifier=license_id, user_type='partner',
+                ip_address=ip, user_agent=ua,
+                success=False, reason='invalid_license_id'
+            )
             return Response(
                 {'error': 'Invalid License ID or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
         if not bcrypt.checkpw(password.encode(), partner.password.encode()):
+            cache.set(fail_key, fail_count + 1, timeout=PARTNER_LOGIN_FAIL_WINDOW)
+            LoginAttempt.objects.create(
+                identifier=license_id, user_type='partner',
+                ip_address=ip, user_agent=ua,
+                success=False, reason='invalid_password'
+            )
             return Response(
                 {'error': 'Invalid License ID or password.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
         if not partner.is_live:
+            LoginAttempt.objects.create(
+                identifier=license_id, user_type='partner',
+                ip_address=ip, user_agent=ua,
+                success=False, reason='not_verified'
+            )
             return Response(
                 {'error': 'Account not verified yet. Please wait for admin approval.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+        cache.delete(fail_key)
+        LoginAttempt.objects.create(
+            identifier=license_id, user_type='partner',
+            ip_address=ip, user_agent=ua,
+            success=True
+        )
 
         tokens = generate_jwt_token(partner.id, user_type='partner')
         return Response({
