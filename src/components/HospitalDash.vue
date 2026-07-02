@@ -582,63 +582,50 @@
                         </span>
                     </div>
 
-                    <!-- Add inside camp card buttons div -->
+              
 
 
-                    <!-- Frozen warning -->
-                    <div v-if="camp.dashboard_frozen && !camp.stock_updated_after_camp"
-                        class="alert alert-danger border-0 rounded-3 p-2 mb-3 small">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        Stock update pending!
-                    </div>
-
+                    
+                    
                     <!-- Buttons -->
                     <div class="d-flex gap-2 mt-auto">
-                        <!-- Notify button — only for scheduled future camps -->
-                        <button
-                            v-if="camp.status === 'scheduled'"
-                            class="btn btn-sky btn-sm flex-grow-1 rounded-3 fw-bold"
-                            @click="scheduleAndNotify(camp.id)"
-                            :disabled="notifyingCamp === camp.id"
-                        >
-                            <span v-if="notifyingCamp === camp.id">
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            </span>
-                            <span v-else>
-                                <i class="fas fa-bullhorn me-1"></i> Notify
-                            </span>
-                        </button>
+    <!-- Notify — sirf scheduled camps ke liye -->
+    <button
+        v-if="camp.status === 'scheduled'"
+        class="btn btn-sky btn-sm flex-grow-1 rounded-3 fw-bold"
+        @click="scheduleAndNotify(camp.id)"
+        :disabled="notifyingCamp === camp.id"
+    >
+        <span v-if="notifyingCamp === camp.id">
+            <span class="spinner-border spinner-border-sm me-1"></span>
+        </span>
+        <span v-else>
+            <i class="fas fa-bullhorn me-1"></i> Notify
+        </span>
+    </button>
 
-                        <button
-    v-if="isCampToday(camp) || isCampPast(camp)"
-    class="btn btn-success btn-sm rounded-3 fw-bold"
-    @click="downloadEnrollments(camp)"
-    :disabled="downloadingCamp === camp.id"
-    title="Download enrolled donors list"
->
-    <span v-if="downloadingCamp === camp.id">
-        <span class="spinner-border spinner-border-sm"></span>
+    <!-- CSV download — camp aaj ya beet chuka ho toh milega -->
+    <button
+        v-if="isCampToday(camp) || isCampPast(camp)"
+        class="btn btn-success btn-sm rounded-3 fw-bold"
+        @click="downloadEnrollments(camp)"
+        :disabled="downloadingCamp === camp.id"
+        title="Download enrolled donors list"
+    >
+        <span v-if="downloadingCamp === camp.id">
+            <span class="spinner-border spinner-border-sm"></span>
+        </span>
+        <span v-else>
+            <i class="fas fa-download me-1"></i> CSV
+        </span>
+    </button>
+
+    <!-- Completed badge — status ab Celery Beat se aata hai -->
+    <span v-if="camp.status === 'completed'"
+        class="badge bg-success rounded-3 p-2 flex-grow-1 text-center">
+          Completed
     </span>
-    <span v-else>
-        <i class="fas fa-download me-1"></i> CSV
-    </span>
-</button>
-
-                        <!-- Update stock button — after camp date -->
-                        <button
-                            v-if="isCampPast(camp) && !camp.stock_updated_after_camp"
-                            class="btn btn-danger btn-sm flex-grow-1 rounded-3 fw-bold"
-                            @click="updateCampStock(camp.id)"
-                        >
-                            <i class="fas fa-boxes me-1"></i> Update Stock
-                        </button>
-
-                        <!-- Completed badge -->
-                        <span v-if="camp.stock_updated_after_camp"
-                            class="badge bg-success rounded-3 p-2 flex-grow-1 text-center">
-                              Completed
-                        </span>
-                    </div>
+</div>
                 </div>
             </div>
         </div>
