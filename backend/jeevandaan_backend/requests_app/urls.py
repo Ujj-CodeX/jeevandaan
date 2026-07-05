@@ -11,6 +11,7 @@ from .views import (
     DonorCancelRequestView,
     FulfillAttenderRequestView,
     GetRequestOTPView,
+    PartnerHistoryView,
     VerifyOTPView,
     PartnerDonorRequestListDetailView,
     SubmitAttenderRatingView,
@@ -38,4 +39,5 @@ urlpatterns = [
     path('donor/<int:request_id>/rate/', SubmitDonorRatingView.as_view()),
     path('attender/my-requests/', MyAttenderRequestsView.as_view()),
     path('donor/<int:request_id>/detail/', DonorRequestDetailView.as_view()),
+    path('partner/history/', PartnerHistoryView.as_view()),
 ]

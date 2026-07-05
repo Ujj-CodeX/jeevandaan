@@ -659,6 +659,7 @@ class InterPartnerRequestListView(APIView):
                 'quantity': req.quantity,
                 'convenience_fee': str(req.convenience_fee),
                 'status': req.status,
+                'reference_id': str(req.attender_request.reference_id),   # ← NEW
                 'created_at': req.created_at,
             }
             for req in incoming
@@ -703,3 +704,46 @@ class AcceptInterPartnerRequestView(APIView):
 
         except InterPartnerRequest.DoesNotExist:
             return Response({'error': 'Request not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class InterPartnerRequestHistoryView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
+
+    def get(self, request):
+        partner = request.user
+
+        from requests_app.models import InterPartnerRequest
+        from django.db.models import Q
+
+        requests_qs = InterPartnerRequest.objects.filter(
+            Q(requesting_partner=partner) | Q(fulfilling_partner=partner)
+        ).select_related(
+            'requesting_partner', 'fulfilling_partner', 'attender_request'
+        ).order_by('-updated_at')
+
+        # optional: /inter-requests/history/?status=fulfilled
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            requests_qs = requests_qs.filter(status=status_filter)
+
+        data = [
+            {
+                'id': req.id,
+                'direction': 'sent' if req.requesting_partner_id == partner.id else 'received',
+                'requesting_partner': req.requesting_partner.hospital_name,
+                'fulfilling_partner': req.fulfilling_partner.hospital_name,
+                'blood_group': req.blood_group,
+                'quantity': req.quantity,
+                'convenience_fee': str(req.convenience_fee),
+                'status': req.status,
+                'reference_id': str(req.attender_request.reference_id),
+                'created_at': req.created_at,
+                'updated_at': req.updated_at,
+            }
+            for req in requests_qs
+        ]
+
+        return Response(data)
+
+        

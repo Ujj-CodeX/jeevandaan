@@ -8,7 +8,7 @@ import threading  # ← KEY FIX: async notifications
 
 from config.authentication import DonorJWTAuthentication
 from config.permissions import IsDonor
-from .models import AttenderRequest, PartnerDonorRequest
+from .models import AttenderRequest, PartnerDonorRequest,InterPartnerRequest
 from .serializers import (
     AttenderRequestSerializer,
     AttenderRequestPublicSerializer,
@@ -906,3 +906,78 @@ class MyAttenderRequestsView(APIView):
                 {'error': 'Something went wrong.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+class PartnerHistoryView(APIView):
+    authentication_classes = [PartnerJWTAuthentication]
+    permission_classes = [IsPartner]
+
+    def get(self, request):
+        partner = request.user
+
+        # 1. Donor requests jo partner ne raise ki (sab statuses — open/assigned/fulfilled/expired/cancelled)
+        donor_requests = PartnerDonorRequest.objects.filter(
+            partner=partner
+        ).select_related('assigned_donor').order_by('-created_at')
+
+        donor_data = [
+            {
+                'id': r.id,
+                'blood_group': r.blood_group,
+                'quantity': r.quantity,
+                'status': r.status,
+                'assigned_donor': r.assigned_donor.name if r.assigned_donor else None,
+                'cancellation_reason': r.cancellation_reason,
+                'created_at': r.created_at,
+                'updated_at': r.updated_at,
+            }
+            for r in donor_requests
+        ]
+
+        # 2. Attender requests jo partner ne fulfill ki
+        attender_fulfilled = AttenderRequest.objects.filter(
+            fulfilled_by=partner
+        ).order_by('-updated_at')
+
+        attender_data = [
+            {
+                'reference_id': str(a.reference_id),
+                'patient_name': a.patient_name,
+                'blood_group': a.blood_group,
+                'quantity': a.quantity,
+                'urgency': a.urgency,
+                'status': a.status,
+                'created_at': a.created_at,
+                'updated_at': a.updated_at,
+            }
+            for a in attender_fulfilled
+        ]
+
+        # 3. Inter-partner requests — sent bhi, received bhi
+        from django.db.models import Q
+        inter_requests = InterPartnerRequest.objects.filter(
+            Q(requesting_partner=partner) | Q(fulfilling_partner=partner)
+        ).select_related(
+            'requesting_partner', 'fulfilling_partner', 'attender_request'
+        ).order_by('-updated_at')
+
+        inter_data = [
+            {
+                'id': i.id,
+                'direction': 'sent' if i.requesting_partner_id == partner.id else 'received',
+                'requesting_partner': i.requesting_partner.hospital_name,
+                'fulfilling_partner': i.fulfilling_partner.hospital_name,
+                'blood_group': i.blood_group,
+                'quantity': i.quantity,
+                'convenience_fee': str(i.convenience_fee),
+                'status': i.status,
+                'reference_id': str(i.attender_request.reference_id),
+                'created_at': i.created_at,
+                'updated_at': i.updated_at,
+            }
+            for i in inter_requests
+        ]
+
+        return Response({
+            'donor_requests': donor_data,
+            'attender_fulfilled': attender_data,
+            'inter_partner_requests': inter_data,
+        })

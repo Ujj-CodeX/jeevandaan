@@ -421,6 +421,69 @@
   </div>
 </section>
 
+<!-- History---Section -->
+
+
+<section v-if="activeTab === 'history'" class="animate-fade">
+    <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-sm rounded-pill px-3"
+            :class="historyTab === 'donor' ? 'btn-sky' : 'btn-sky-outline'"
+            @click="historyTab = 'donor'">Donor Requests</button>
+        <button class="btn btn-sm rounded-pill px-3"
+            :class="historyTab === 'attender' ? 'btn-sky' : 'btn-sky-outline'"
+            @click="historyTab = 'attender'">Attender Fulfilled</button>
+        <button class="btn btn-sm rounded-pill px-3"
+            :class="historyTab === 'inter' ? 'btn-sky' : 'btn-sky-outline'"
+            @click="historyTab = 'inter'">Inter-Partner</button>
+    </div>
+
+    <div v-if="historyLoading" class="text-center py-4">
+        <div class="spinner-border text-sky"></div>
+    </div>
+
+    <div v-else class="card border-0 shadow-sm rounded-4 p-3">
+        <table class="table table-hover align-middle" v-if="historyTab === 'donor'">
+            <thead><tr><th>Group</th><th>Qty</th><th>Donor</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                <tr v-for="r in history.donor_requests" :key="r.id">
+                    <td>{{ r.blood_group }}</td>
+                    <td>{{ r.quantity }}</td>
+                    <td>{{ r.assigned_donor || '-' }}</td>
+                    <td><span class="badge bg-secondary">{{ r.status }}</span></td>
+                    <td class="small text-muted">{{ timeAgo(r.updated_at) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table table-hover align-middle" v-if="historyTab === 'attender'">
+            <thead><tr><th>Patient</th><th>Group</th><th>Qty</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                <tr v-for="a in history.attender_fulfilled" :key="a.reference_id">
+                    <td>{{ a.patient_name }}</td>
+                    <td>{{ a.blood_group }}</td>
+                    <td>{{ a.quantity }}</td>
+                    <td><span class="badge bg-success">{{ a.status }}</span></td>
+                    <td class="small text-muted">{{ timeAgo(a.updated_at) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table table-hover align-middle" v-if="historyTab === 'inter'">
+            <thead><tr><th>Direction</th><th>Partner</th><th>Group</th><th>Qty</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                <tr v-for="i in history.inter_partner_requests" :key="i.id">
+                    <td><span class="badge" :class="i.direction === 'sent' ? 'bg-warning text-dark' : 'bg-info text-dark'">{{ i.direction }}</span></td>
+                    <td>{{ i.direction === 'sent' ? i.fulfilling_partner : i.requesting_partner }}</td>
+                    <td>{{ i.blood_group }}</td>
+                    <td>{{ i.quantity }}</td>
+                    <td><span class="badge bg-secondary">{{ i.status }}</span></td>
+                    <td class="small text-muted">{{ timeAgo(i.updated_at) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
         <!-- ══════════════════════════════════ -->
         <!-- VERIFY DONATION                    -->
         <!-- ══════════════════════════════════ -->
@@ -752,6 +815,12 @@
                                 <strong class="text-danger">{{ req.blood_group }}</strong>
                                 — {{ req.quantity }} units
                             </small>
+                            <small class="d-block text-muted smallest mt-1">
+                            <i class="fas fa-key me-1"></i> Ref: {{ req.reference_id?.substring(0, 8) }}...
+                              <button class="btn btn-sm btn-link p-0 ms-1" @click="copyRef(req.reference_id)">
+                            <i class="fas fa-copy"></i>
+                            </button>
+                            </small>
                         </div>
                         <span class="badge bg-warning text-dark rounded-pill">
                             Pending
@@ -1001,6 +1070,7 @@ import api from '@/api/index.js'
 export default {
   data() {
     return {
+      
       activeTab: 'overview',
       isMobileMenuOpen: false,
       unreadNotifs: 0,
@@ -1030,6 +1100,11 @@ creatingCamp: false,
 notifyingCamp: null,
 campError: null,
 campSuccess: null,
+
+// History data 
+history: { donor_requests: [], attender_fulfilled: [], inter_partner_requests: [] },
+        historyLoading: false,
+        historyTab: 'donor',
 
 
 campForm: {
@@ -1101,6 +1176,7 @@ today: new Date().toISOString().split('T')[0],
         { id: 'profile',       label: 'My Facility',     icon: 'fas fa-hospital-user' },
         { id: 'logout',        label: 'Logout',          icon: 'fas fa-sign-out-alt' },
         { id: 'inter-partner', label: 'Partner Requests', icon: 'fas fa-hospital-user' },
+        { id: 'history', label: 'History', icon: 'fas fa-clock-rotate-left' },
       ],
 
       // Inter partner
@@ -1511,6 +1587,10 @@ acceptingInterReq: null,
         return
       }
 
+      if (id === 'history' && this.history.donor_requests.length === 0) {
+        this.fetchHistory()
+    }
+
        
 
 
@@ -1712,6 +1792,19 @@ async downloadEnrollments(camp) {
         console.error(err)
     } finally {
         this.downloadingCamp = null
+    }
+},
+
+// fetch history
+async fetchHistory() {
+    this.historyLoading = true
+    try {
+        const response = await api.get('https://api.jeevandaan.online/api/requests/partner/history/')
+        this.history = response.data
+    } catch (err) {
+        console.error('History fetch failed:', err)
+    } finally {
+        this.historyLoading = false
     }
 },
 
