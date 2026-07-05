@@ -691,16 +691,18 @@ class AcceptInterPartnerRequestView(APIView):
             inter_req.attender_request.status = 'fulfilled'
             inter_req.attender_request.save()
 
-            stock = Stock.objects.filter(
-                partner=partner,
-                blood_group=inter_req.blood_group,
-            ).first()
+            stock, created = Stock.objects.get_or_create(
+              partner=partner,
+              blood_group=inter_req.blood_group,
+              defaults={'quantity': 0}
+               )
+            stock.quantity = max(0, stock.quantity - inter_req.quantity)
+            stock.save()
 
-            if stock:
-                stock.quantity = max(0, stock.quantity - inter_req.quantity)
-                stock.save()
-
-            return Response({'message': 'Inter-partner request fulfilled!'})
+            return Response({
+               'message': 'Inter-partner request fulfilled!',
+               'stock_warning': 'No prior stock record existed for this blood group — created with 0 units.' if created else None
+            })
 
         except InterPartnerRequest.DoesNotExist:
             return Response({'error': 'Request not found.'}, status=status.HTTP_404_NOT_FOUND)
