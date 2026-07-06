@@ -298,6 +298,8 @@
                 <span v-else>SEARCH</span>
               </button>
             </div>
+
+
             <div v-if="searchResult" class="mt-4 bg-white text-dark rounded-4 p-4">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold mb-0"><i class="fas fa-file-medical text-sky me-2"></i>{{ searchResult.patient_name }}</h6>
@@ -312,47 +314,21 @@
                 <div class="col-6"><i class="fas fa-phone me-1"></i>{{ searchResult.attender_phone }}</div>
               </div>
               <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-sky fw-bold flex-grow-1 rounded-3" @click="fulfillAttenderRequest(searchResult.reference_id)" :disabled="fulfillingRequest">
-                  <span v-if="fulfillingRequest"><span class="spinner-border spinner-border-sm me-2"></span>Processing...</span>
-                  <span v-else><i class="fas fa-check me-2"></i>Mark as Fulfilled</span>
-                </button>
-                <button class="btn btn-light border flex-grow-1 rounded-3" @click="searchResult = null">Cancel</button>
-              </div>
+    <!-- NEW: opens the existing document-verification modal -->
+    <button class="btn btn-light border fw-bold rounded-3" @click="selectedRequest = searchResult">
+      <i class="fas fa-id-card-alt me-2"></i>Verify Documents
+    </button>
+    <button class="btn btn-sky fw-bold flex-grow-1 rounded-3" @click="fulfillAttenderRequest(searchResult.reference_id)" :disabled="fulfillingRequest">
+      <span v-if="fulfillingRequest"><span class="spinner-border spinner-border-sm me-2"></span>Processing...</span>
+      <span v-else><i class="fas fa-check me-2"></i>Mark as Fulfilled</span>
+    </button>
+    <button class="btn btn-light border rounded-3" @click="searchResult = null">Cancel</button>
+  </div>
             </div>
             <div v-if="searchError" class="mt-3 alert alert-danger border-0 rounded-4">{{ searchError }}</div>
           </div>
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h6 class="fw-bold mb-0">All Pending Requests <span class="badge bg-sky ms-2">{{ attenderRequests.length }}</span></h6>
-    <button class="btn btn-sky-outline btn-sm rounded-pill px-3" @click="fetchAttenderRequests"><i class="fas fa-sync me-1"></i> Refresh</button>
-  </div>
-
-  <div v-if="attenderLoading" class="text-center py-4"><div class="spinner-border text-sky"></div></div>
-  <div v-else-if="attenderRequests.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center">
-    <i class="fas fa-inbox text-muted fa-3x mb-3"></i>
-    <h6 class="fw-bold">No Pending Requests</h6>
-  </div>
-
-  <div v-else class="row g-3">
-    <div class="col-md-6" v-for="req in attenderRequests" :key="req.reference_id">
-      <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
-        <div class="d-flex justify-content-between mb-2">
-          <span class="badge bg-light text-sky border smallest">REF: {{ req.reference_id?.substring(0, 8) }}</span>
-          <span :class="['badge rounded-pill', req.urgency === 'critical' ? 'bg-danger' : 'bg-success']">{{ req.urgency?.toUpperCase() }}</span>
-        </div>
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <span class="fw-800 text-danger h3 mb-0">{{ req.blood_group }}</span>
-          <div>
-            <h6 class="fw-bold mb-0">{{ req.patient_name }}</h6>
-            <small class="text-muted">{{ req.hospital_name }} • {{ req.quantity }} Units</small>
-          </div>
-        </div>
-        <button class="btn btn-sky btn-sm fw-bold w-100 rounded-3 py-2" @click="selectedRequest = req">
-          <i class="fas fa-id-card-alt me-2"></i> Verify Documents
-        </button>
-      </div>
-    </div>
-  </div>
+ 
 
   <div v-if="selectedRequest" class="modal-backdrop d-flex align-items-center justify-content-center p-3 z-3">
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden w-100 animate-slide-up" style="max-width: 750px; max-height: 92vh;">
@@ -1238,7 +1214,7 @@ acceptingInterReq: null,
         await this.fetchNotifications()
         await this.buildOverviewStats()
         await this.fetchActiveDonorRequests()
-        await this.fetchAttenderRequests()
+        this.selectedRequest = null
         await this.fetchRecentDonations()
         await this.fetchCamps()
         await this.fetchIncomingInterRequests()  
