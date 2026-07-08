@@ -1,3 +1,10 @@
+#threads alternative due to production Glitch
+
+from notifications.tasks import send_donor_notifications_task, create_notification_task
+
+
+#
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -148,17 +155,13 @@ class PartnerDonorRequestCreateView(APIView):
             expires_at = timezone.now() + timedelta(hours=12)
             req = serializer.save(partner=partner, expires_at=expires_at)
 
-            # ── FIX: fire notification in background — never block the response
-            run_in_background(
-                notify_nearby_donors,
-                blood_group=req.blood_group,
-                partner_lat=partner.latitude,
-                partner_lng=partner.longitude,
-                message=(
-                    f'Urgent! {req.blood_group} blood needed at '
-                    f'{partner.hospital_name}. Please donate!'
-                ),
-                radius_km=10,
+            # ── FIX: Replaced Background thread with Celery task for async notifications
+            send_donor_notifications_task.delay(
+              req.blood_group,
+              str(partner.latitude),
+              str(partner.longitude),
+              f'Urgent! {req.blood_group} blood needed at {partner.hospital_name}. Please donate!',
+              10,
             )
 
             logger.info("partner_donor_request_created", extra={
@@ -389,20 +392,17 @@ class DonorAcceptRequestView(APIView):
             )
 
             # ── FIX: notification in background
-            def _notify():
-                from notifications.models import Notification
-                Notification.objects.create(
-                    partner=req.partner,
-                    notification_type='sms',
-                    trigger='donor_accepted',
-                    message=(
-                        f'Donor #{donor.id} has accepted your blood request '
-                        f'for {req.blood_group} ({req.quantity} units). '
-                        f'OTP: {otp.code}'
-                    ),
-                    status='pending'
-                )
-            run_in_background(_notify)
+            create_notification_task.delay(
+              partner_id=req.partner_id,
+              notification_type='sms',
+              trigger='donor_accepted',
+               message=(
+               f'Donor #{donor.id} has accepted your blood request '
+                f'for {req.blood_group} ({req.quantity} units). '
+               f'OTP: {otp.code}'
+              ),
+              status='pending',
+            )
 
             logger.info("donor_accepted_request", extra={
                 "donor_id":    donor.id,

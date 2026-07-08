@@ -1,3 +1,8 @@
+#threads alternative due to production Glitch
+
+from notifications.tasks import notify_camp_donors_task, create_notification_task
+
+
 from flask.cli import load_dotenv  # noqa — keep if used elsewhere
 from dotenv import load_dotenv
 from rest_framework.views import APIView
@@ -338,15 +343,7 @@ class ScheduleAndNotifyCampView(APIView):
             camp = DonationCamp.objects.get(id=camp_id, organizer__id=partner.id)
 
             # ── FIX: run heavy notification pipeline in background
-            def _notify_camp(camp_id):
-                try:
-                    from notifications.helpers import notify_camp_donors
-                    camp_obj = DonationCamp.objects.get(id=camp_id)
-                    notify_camp_donors(camp_obj)
-                except Exception as e:
-                    print(f"[notify_camp_donors error] {e}")
-
-            run_in_background(_notify_camp, camp.id)
+            notify_camp_donors_task.delay(camp.id)
 
             return Response({
                 'message': 'Camp scheduled! Donors are being notified in the background.',
@@ -610,21 +607,18 @@ class RaiseInterPartnerRequestView(APIView):
             )
 
             # ── FIX: notification in background
-            def _notify():
-                from notifications.models import Notification
-                Notification.objects.create(
-                    partner=fulfilling_partner,
-                    notification_type='sms',
-                    trigger='donor_request',
-                    message=(
-                        f"Inter-partner blood request from "
-                        f"{requesting_partner.hospital_name}! "
-                        f"Need {quantity} units of {blood_group}. "
-                        f"Convenience fee: ₹{fulfilling_partner.convenience_fee}"
-                    ),
-                    status='pending',
-                )
-            run_in_background(_notify)
+            create_notification_task.delay(
+            partner_id=fulfilling_partner.id,
+            notification_type='sms',
+            trigger='donor_request',
+             message=(
+            f"Inter-partner blood request from "
+            f"{requesting_partner.hospital_name}! "
+            f"Need {quantity} units of {blood_group}. "
+            f"Convenience fee: ₹{fulfilling_partner.convenience_fee}"
+              ),
+             status='pending',
+            )
 
             return Response({
                 'message': f'Request sent to {fulfilling_partner.hospital_name}!',
