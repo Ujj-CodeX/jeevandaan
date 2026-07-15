@@ -77,12 +77,14 @@ class ExpireUnvisitedDonorRequestsView(APIView):
 
         from requests_app.models import PartnerDonorRequest
         from chat.models import Chat
+        from notifications.tasks import create_notification_task
 
-        two_hours_ago = timezone.now() - timedelta(hours=2)
+        # ── FIX: reduced from 2 hours to 1 hour
+        one_hour_ago = timezone.now() - timedelta(hours=1)
         assigned_requests = PartnerDonorRequest.objects.filter(
             status='assigned',
-            updated_at__lte=two_hours_ago
-        ).select_related('assigned_donor')  # ← fetch donor BEFORE nulling
+            updated_at__lte=one_hour_ago
+        ).select_related('assigned_donor', 'partner')
 
         count = 0
         for req in assigned_requests:
@@ -93,13 +95,25 @@ class ExpireUnvisitedDonorRequestsView(APIView):
             ).exists()
 
             if not visited:
-                donor = req.assigned_donor  # ← grab BEFORE nulling
+                donor = req.assigned_donor
                 req.status = 'expired'
                 req.assigned_donor = None
                 req.save()
                 count += 1
 
-                if donor:  # ← now this check is safe
+                # ── FIX: notify partner
+                create_notification_task.delay(
+                    partner_id=req.partner_id,
+                    notification_type='sms',
+                    trigger='request_expiry',
+                    message=(
+                        f'Your {req.blood_group} request ({req.quantity} units) '
+                        f'has expired — the assigned donor did not arrive within 1 hour.'
+                    ),
+                    status='pending',
+                )
+
+                if donor:
                     donor.reliability_score = max(0, donor.reliability_score - 10)
                     donor.cancellation_count += 1
                     if donor.cancellation_count >= 3:
