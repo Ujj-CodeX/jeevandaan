@@ -13,3 +13,9 @@ def hash_email_for_cache(email):
     be readable as plain keys.
     """
     return hashlib.sha256(email.strip().lower().encode()).hexdigest()
+
+def mask_otp(code: str) -> str:
+    """Masks all but the last 2 digits — e.g. '482913' -> '****13'"""
+    if not code or len(code) <= 2:
+        return '*' * len(code or '')
+    return '*' * (len(code) - 2) + code[-2:]

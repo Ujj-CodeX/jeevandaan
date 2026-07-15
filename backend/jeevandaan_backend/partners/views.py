@@ -19,6 +19,7 @@ from .serializers import (
     CampEnrollmentSerializer,
     PartnerUpdateProfileSerializer,
 )
+from django.db import transaction
 import bcrypt
 import jwt
 import os
@@ -671,31 +672,35 @@ class AcceptInterPartnerRequestView(APIView):
             partner = request.user
 
             from requests_app.models import InterPartnerRequest
-            inter_req = InterPartnerRequest.objects.select_related(
-                'attender_request'
-            ).get(
-                id=inter_request_id,
-                fulfilling_partner=partner,
-                status='pending',
-            )
 
-            inter_req.status = 'fulfilled'
-            inter_req.save()
+            with transaction.atomic():
+                
+                # double-accept if the same request somehow gets hit twice
+                inter_req = InterPartnerRequest.objects.select_for_update().select_related(
+                    'attender_request'
+                ).get(
+                    id=inter_request_id,
+                    fulfilling_partner=partner,
+                    status='pending',
+                )
 
-            inter_req.attender_request.status = 'fulfilled'
-            inter_req.attender_request.save()
+                inter_req.status = 'fulfilled'
+                inter_req.save()
 
-            stock, created = Stock.objects.get_or_create(
-              partner=partner,
-              blood_group=inter_req.blood_group,
-              defaults={'quantity': 0}
-               )
-            stock.quantity = max(0, stock.quantity - inter_req.quantity)
-            stock.save()
+                inter_req.attender_request.status = 'fulfilled'
+                inter_req.attender_request.save()
+
+                stock, created = Stock.objects.select_for_update().get_or_create(
+                    partner=partner,
+                    blood_group=inter_req.blood_group,
+                    defaults={'quantity': 0}
+                )
+                stock.quantity = max(0, stock.quantity - inter_req.quantity)
+                stock.save()
 
             return Response({
-               'message': 'Inter-partner request fulfilled!',
-               'stock_warning': 'No prior stock record existed for this blood group — created with 0 units.' if created else None
+                'message': 'Inter-partner request fulfilled!',
+                'stock_warning': 'No prior stock record existed for this blood group — created with 0 units.' if created else None
             })
 
         except InterPartnerRequest.DoesNotExist:

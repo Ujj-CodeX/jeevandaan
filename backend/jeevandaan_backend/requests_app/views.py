@@ -1,9 +1,10 @@
 #threads alternative due to production Glitch
 
-from notifications.tasks import send_donor_notifications_task, create_notification_task
+from notifications.tasks import send_donor_notifications_task, create_notification_task,notify_camp_donors_task
 
 
 #
+from django.db import transaction
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -36,6 +37,7 @@ from config.authentication import AnyJWTAuthentication
 from config.permissions import IsAuthenticated
 
 from config.logger import get_logger
+from users.utils import mask_otp
 
 logger = get_logger(__name__)
 # ─────────────────────────────────────────────────────────
@@ -351,156 +353,176 @@ class DonorAcceptRequestView(APIView):
     permission_classes = [IsDonor]
 
     def post(self, request, request_id):
+        donor = request.user
+
+        if donor.is_locked:
+            logger.warning("donor_request_accept_blocked_locked", extra={
+                "donor_id": donor.id, "request_id": request_id
+            })
+            return Response({'error': 'Your account is locked.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not donor.is_aadhaar_verified:
+            logger.warning("donor_request_accept_blocked_aadhaar_unverified", extra={
+                "donor_id": donor.id, "request_id": request_id
+            })
+            return Response(
+                {'error': 'Aadhaar verification required to accept donation requests.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         try:
-            donor = request.user
-
-            if donor.is_locked:
-
-                logger.warning("donor_request_accept_blocked_locked", extra={
-                    "donor_id": donor.id ,
-                    "request_id": request_id
-                })
-                return Response(
-                    {'error': 'Your account is locked.'},
-                    status=status.HTTP_403_FORBIDDEN
+            # ── FIX: select_for_update locks the row for the duration
+            # of this transaction — a second concurrent accept() blocks
+            # here until we commit, then fails the status='open' filter.
+            with transaction.atomic():
+                req = PartnerDonorRequest.objects.select_for_update().select_related('partner').get(
+                    id=request_id,
+                    status='open'
                 )
-            
-            if not donor.is_aadhaar_verified:
-                logger.warning("donor_request_accept_blocked_aadhaar_unverified", extra={
-                    "donor_id": donor.id ,
-                    "request_id": request_id
-                })
-                return Response(
-                    {'error': 'Aadhaar verification required to accept donation requests.'},
-                    status=status.HTTP_403_FORBIDDEN
+
+                req.assigned_donor = donor
+                req.status = 'assigned'
+                req.save()
+
+                OTPCode.objects.filter(request=req).delete()
+                otp = OTPCode.objects.create(
+                    request=req,
+                    code=OTPCode.generate_code()
                 )
-        
-
-            req = PartnerDonorRequest.objects.select_related('partner').get(
-                id=request_id,
-                status='open'
-            )
-
-            req.assigned_donor = donor
-            req.status = 'assigned'
-            req.save()
-
-            OTPCode.objects.filter(request=req).delete()
-            otp = OTPCode.objects.create(
-                request=req,
-                code=OTPCode.generate_code()
-            )
-
-            # ── FIX: notification in background
-            create_notification_task.delay(
-              partner_id=req.partner_id,
-              notification_type='sms',
-              trigger='donor_accepted',
-               message=(
-               f'Donor #{donor.id} has accepted your blood request '
-                f'for {req.blood_group} ({req.quantity} units). '
-               f'OTP: {otp.code}'
-              ),
-              status='pending',
-            )
-
-            logger.info("donor_accepted_request", extra={
-                "donor_id":    donor.id,
-                "request_id":  req.id,
-                "partner_id":  req.partner.id,
-                "blood_group": req.blood_group,
-                "quantity":    req.quantity,
-            })
-
-            return Response({
-                'message': 'Request accepted!',
-                'otp_code': otp.code,
-                'request': PartnerDonorRequestSerializer(req).data
-            })
+            # ── transaction commits here, lock released
 
         except PartnerDonorRequest.DoesNotExist:
             logger.warning("donor_request_not_found", extra={
-                "donor_id":   getattr(request.user, 'id', None),
-                "request_id": request_id,
+                "donor_id": donor.id, "request_id": request_id,
             })
             return Response(
                 {'error': 'Request not found or already assigned.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except Exception :
+        except Exception:
             logger.exception("donor_accept_request_error", extra={
-                "donor_id":   getattr(request.user, 'id', None),
-                "request_id": request_id,
+                "donor_id": donor.id, "request_id": request_id,
             })
             return Response({'error': 'Something went wrong.'}, status=500)
 
+        # ── notification OUTSIDE the atomic block — network/Celery call
+        # shouldn't hold the DB row lock any longer than necessary
+        create_notification_task.delay(
+            partner_id=req.partner_id,
+            notification_type='sms',
+            trigger='donor_accepted',
+            message=(
+                f'Donor #{donor.id} has accepted your blood request '
+                f'for {req.blood_group} ({req.quantity} units). '
+                f'OTP: {mask_otp(otp.code)}'
+            ),
+            status='pending',
+        )
+
+        logger.info("donor_accepted_request", extra={
+            "donor_id": donor.id, "request_id": req.id,
+            "partner_id": req.partner.id, "blood_group": req.blood_group,
+            "quantity": req.quantity,
+        })
+
+        return Response({
+            'message': 'Request accepted!',
+            'otp_code': otp.code,
+            'request': PartnerDonorRequestSerializer(req).data
+        })
 
 class DonorCancelRequestView(APIView):
     authentication_classes = [DonorJWTAuthentication]
     permission_classes = [IsDonor]
 
     def post(self, request, request_id):
-        try:
-            donor = request.user
+        donor = request.user
 
-            req = PartnerDonorRequest.objects.get(
-                id=request_id,
-                assigned_donor=donor,
-                status='assigned'
+        reason = request.data.get('reason')
+        if not reason:
+            logger.warning("donor_request_cancel_blocked_no_reason", extra={
+                "donor_id": donor.id, "request_id": request_id
+            })
+            return Response(
+                {'error': 'Cancellation reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-            reason = request.data.get('reason')
-            if not reason:
-                logger.warning("donor_request_cancel_blocked_no_reason", extra={
-                    "donor_id": donor.id,
-                    "request_id": request_id})
-                return Response(
-                    {'error': 'Cancellation reason is required.'},
-                    status=status.HTTP_400_BAD_REQUEST
+        try:
+            with transaction.atomic():
+                # ── FIX: lock the request row so a duplicate cancel call
+                # (or a background expiry job) can't race this update
+                req = PartnerDonorRequest.objects.select_for_update().get(
+                    id=request_id,
+                    assigned_donor=donor,
+                    status='assigned'
                 )
 
-            req.status = 'open'
-            req.assigned_donor = None   
-            req.cancellation_reason = reason
-            req.save()
+                req.status = 'open'
+                req.assigned_donor = None
+                req.cancellation_reason = reason
+                req.save()
 
-            donor.reliability_score = max(0, donor.reliability_score - 10)
-            donor.cancellation_count += 1
+                # ── FIX: lock donor row too — cancellation_count/score
+                # updates must not interleave with another concurrent write
+                donor_locked = Donor.objects.select_for_update().get(id=donor.id)
+                donor_locked.reliability_score = max(0, donor_locked.reliability_score - 10)
+                donor_locked.cancellation_count += 1
 
-            if donor.cancellation_count >= 3:
-                donor.is_locked = True
-                donor.locked_until = timezone.now() + timedelta(days=30)
-            
-            logger.warning("donor_locked_after_cancellations", extra={
-                    "donor_id":          donor.id,
-                    "cancellation_count": donor.cancellation_count,
-                    "locked_until":       str(donor.locked_until),
-                })
-            
-            donor.save()
+                if donor_locked.cancellation_count >= 3:
+                    donor_locked.is_locked = True
+                    donor_locked.locked_until = timezone.now() + timedelta(days=10)
+                    logger.warning("donor_locked_after_cancellations", extra={
+                        "donor_id": donor_locked.id,
+                        "cancellation_count": donor_locked.cancellation_count,
+                        "locked_until": str(donor_locked.locked_until),
+                    })
 
-            logger.info("donor_cancelled_request", extra={
-                "donor_id":          donor.id,
-                "request_id":        req.id,
-                "reason":            reason,
-                "new_score":         donor.reliability_score,
-                "cancellation_count": donor.cancellation_count,
-            })
-
-            return Response({
-                'message': 'Request cancelled.',
-                'reliability_score': donor.reliability_score
-            })
+                donor_locked.save()
 
         except PartnerDonorRequest.DoesNotExist:
             logger.warning("donor_request_not_found", extra={
-                "donor_id":   getattr(request.user, 'id', None),
-                "request_id": request_id,
+                "donor_id": donor.id, "request_id": request_id,
             })
             return Response(
                 {'error': 'Request not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        create_notification_task.delay(
+            partner_id = req.partner_id,
+            notification_type = 'sms',
+            trigger = 'donor_request',
+            message = (
+                f'Donor who accepted your {req.blood_group} request '
+                f'({req.quantity} units) has cancelled. Reason: {reason}. '
+                f'Request is open again — nearby donors are being notified.'
+
+            ),
+            status='pending',
+
+        )
+        send_donor_notifications_task.delay(
+
+            req.blood_group,
+            str(req.partner.latitude),
+            str(req.partner.longitude),
+            f'Urgent! {req.blood_group} blood needed at {req.partner.hospital_name}. Please donate!',
+            10,
+
+
+        )
+
+        logger.info("donor_cancelled_request_notifications_sent", extra={
+           "donor_id": donor_locked.id ,"request_id": req.id,
+           "reason": reason, "new_score": donor_locked.reliability_score,
+              "cancellation_count": donor_locked.cancellation_count,
+
+            })
+    
+        return Response({
+            'message': 'Request cancelled.',
+            'reliability_score': donor_locked.reliability_score
+        })
 
 
 class FulfillAttenderRequestView(APIView):

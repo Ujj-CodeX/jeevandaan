@@ -193,7 +193,7 @@ forgotSuccess: null,
 
       try {
         const response = await api.post(
-          "https://api.jeevandaan.online/api/users/login/",
+          "http://127.0.0.1:8000/api/users/login/",
           {
             username: this.username,
             password: this.password,
@@ -227,7 +227,7 @@ forgotSuccess: null,
     this.forgotError = null
 
     try {
-        await api.post('https://api.jeevandaan.online/api/users/forgot-password/', {
+        await api.post('http://127.0.0.1:8000/api/users/forgot-password/', {
             email: this.forgotEmail
         })
         this.forgotStep = 2
@@ -249,7 +249,7 @@ async resetPassword() {
     this.forgotError = null
 
     try {
-        await api.post('https://api.jeevandaan.online/api/users/reset-password/', {
+        await api.post('http://127.0.0.1:8000/api/users/reset-password/', {
             email: this.forgotEmail,
             otp: this.forgotOTP,
             new_password: this.forgotNewPassword
