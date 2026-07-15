@@ -84,7 +84,7 @@ export default {
             this.error = null
 
             try {
-                const response = await api.post('https://api.jeevandaan.online/api/partners/login/', this.form)
+                const response = await api.post('http://127.0.0.1:8000/api/partners/login/', this.form)
 
                 // Store tokens
                 localStorage.setItem('access_token', response.data.tokens.access)
