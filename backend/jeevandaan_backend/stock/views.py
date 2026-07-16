@@ -35,11 +35,30 @@ class StockUpdateView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            valid_groups = [choice[0] for choice in Stock.BLOOD_GROUPS]
+            if blood_group not in valid_groups:
+                return Response(
+                    {'error': f'Invalid blood_group. Must be one of {valid_groups}.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    
+                )
+            try:
+                quantity = int(quantity)
+            except (TypeError, ValueError):
+                return Response(
+                    {'error': 'quantity must be a valid integer.'},
+                    status=status.HTTP_400_BAD_REQUEST
+
+                )
+            if quantity < 0:
+                return Response(
+                    {'error': 'quantity cannot be negative.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             stock, created = Stock.objects.update_or_create(
                 partner_id=partner_id,
                 blood_group=blood_group,
                 defaults={'quantity': quantity}
-
             )
 
             StockUpdateLog.objects.create(
