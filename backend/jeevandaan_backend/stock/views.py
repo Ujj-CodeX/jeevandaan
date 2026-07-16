@@ -1,5 +1,6 @@
 from flask.cli import load_dotenv
-
+from django.db.models import Q
+from geopy.distance import geodesic
 # ── Partner updates their stock ───────────────────────
 from dotenv import load_dotenv
 from rest_framework.views import APIView
@@ -96,12 +97,17 @@ class PartnerStockView(APIView):
 
 
 # ── Search stock by blood group ───────────────────────
+#############################
+# Warning: This Viewned point is not wired in frontend yet or nay vue. Exist there for future usecase. 
+#############################
 class StockSearchView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         blood_group = request.query_params.get('blood_group')
         city = request.query_params.get('city')
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
 
         if not blood_group:
             return Response(
@@ -111,12 +117,50 @@ class StockSearchView(APIView):
 
         stock = Stock.objects.filter(
             blood_group=blood_group,
-            quantity__gt=0,              
+            quantity__gt=0,
             partner__is_live=True,
             partner__is_verified=True,
-        )
+        ).select_related('partner')   # ← fix 2: N+1 avoid — 1 JOIN query instead of N
 
         if city:
             stock = stock.filter(partner__city__icontains=city)
+
+        # ── fix 1: distance sort — only when lat/lng given ──
+        if lat and lng:
+            try:
+                lat, lng = float(lat), float(lng)
+            except (TypeError, ValueError):
+                return Response(
+                    {'error': 'lat and lng must be valid numbers.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            with_location = stock.filter(
+                partner__latitude__isnull=False,
+                partner__longitude__isnull=False,
+            )
+            without_location = stock.filter(
+                Q(partner__latitude__isnull=True) | Q(partner__longitude__isnull=True)
+            )
+
+            results = []
+            for s in with_location:
+                distance = geodesic(
+                    (lat, lng),
+                    (float(s.partner.latitude), float(s.partner.longitude))
+                ).km
+                data = StockSerializer(s).data
+                data['distance_km'] = round(distance, 1)
+                results.append(data)
+
+            results.sort(key=lambda x: x['distance_km'])
+
+            # location-missing partners — end mein, distance unknown
+            for s in without_location:
+                data = StockSerializer(s).data
+                data['distance_km'] = None
+                results.append(data)
+
+            return Response(results)
 
         return Response(StockSerializer(stock, many=True).data)
