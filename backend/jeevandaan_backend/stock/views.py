@@ -100,6 +100,7 @@ class PartnerStockView(APIView):
 #############################
 # Warning: This Viewned point is not wired in frontend yet or nay vue. Exist there for future usecase. 
 #############################
+
 class StockSearchView(APIView):
     permission_classes = [AllowAny]
 

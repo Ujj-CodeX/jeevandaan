@@ -2,6 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+
+from backend.jeevandaan_backend.conftest import partner
+from backend.jeevandaan_backend.notifications.tasks import send_donor_notifications_task
 from .models import Notification
 from .serializers import NotificationSerializer
 from users.models import Donor
@@ -102,20 +105,18 @@ class NotifyNearbyDonorsView(APIView):
                     {'error': 'blood_group and city are required.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            if not partner.latitude or not partner.longitude:
+                return Response(
+                {'error': 'Partner location not set. Update your location first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
             # Send notifications
-            count = notify_nearby_donors(blood_group, city, message)
+            send_donor_notifications_task.delay(
+            blood_group, str(partner.latitude), str(partner.longitude), message, 10
+        )
 
-            if count == 0:
-                return Response(
-                    {'error': 'No nearby donors found.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            return Response({
-                'message': f'Notifications sent to {count} nearby donors.',
-                'donors_notified': count
-            })
+            return Response({'message': 'Notifications are being sent to nearby donors in the background.'})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
     
