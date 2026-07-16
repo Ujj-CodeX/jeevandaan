@@ -92,14 +92,7 @@ class PartnerStockView(APIView):
         return Response(StockSerializer(stock, many=True).data)
 
 
-# ── View critically low stock ─────────────────────────
-class CriticalStockView(APIView):
-    permission_classes = [AllowAny]
 
-    def get(self, request):
-        # quantity less than 3 units = critical
-        critical = Stock.objects.filter(quantity__lte=3)
-        return Response(StockSerializer(critical, many=True).data)
 
 
 # ── Search stock by blood group ───────────────────────
