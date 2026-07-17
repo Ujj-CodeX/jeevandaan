@@ -109,7 +109,7 @@ class DonorHistoryView(APIView):
             donor = request.user
             history = DonationHistory.objects.filter(
                 donor=donor
-            ).order_by('-donated_at')
+            ).select_related('partner', 'request').order_by('-donated_at')
 
             return Response(
                 DonationHistorySerializer(history, many=True).data
@@ -132,7 +132,7 @@ class PartnerDonationHistoryView(APIView):
             partner = request.user
             history = DonationHistory.objects.filter(
                 partner=partner
-            ).order_by('-donated_at')
+            ).select_related('donor', 'request').order_by('-donated_at')
 
             return Response(
                 DonationHistorySerializer(history, many=True).data
