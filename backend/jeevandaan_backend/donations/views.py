@@ -25,6 +25,10 @@ from config.permissions import IsDonor
 #  BANK VERIFIES DONATION
 # ════════════════════════════════════════════════════
 
+from django.db import transaction
+from django.db.models import F
+from django.db.models.functions import Least
+
 class VerifyDonationView(APIView):
     authentication_classes = [PartnerJWTAuthentication]
     permission_classes = [IsPartner]
@@ -32,46 +36,51 @@ class VerifyDonationView(APIView):
     def post(self, request, request_id):
         try:
             partner = request.user
-            req = PartnerDonorRequest.objects.get(
-                id=request_id,
-                partner=partner,
-                status='assigned'
-            )
+            with transaction.atomic():
+                req = PartnerDonorRequest.objects.select_for_update().get(
+                    id=request_id,
+                    partner=partner,
+                    status="assigned"
+                )
 
-            donor = req.assigned_donor
+                donor = req.assigned_donor
 
-            # Create donation history silently
-            donation = DonationHistory.objects.create(
-                donor=donor,
-                partner=partner,
-                request=req,
-                blood_group=req.blood_group,
-                units_donated=req.quantity,
-                status='completed',
-                score_change=10.0,
-                is_verified_by_bank=True,
-                verified_at=timezone.now()
-            )
+                # Create donation history
+                donation = DonationHistory.objects.create(
+                    donor=donor,
+                    partner=partner,
+                    request=req,
+                    blood_group=req.blood_group,
+                    units_donated=req.quantity,
+                    status="completed",
+                    score_change=10.0,
+                    is_verified_by_bank=True,
+                    verified_at=timezone.now()
+                )
 
-            # Update request status
-            req.status = 'fulfilled'
-            req.save()
+                # Update request status
+                req.status = "fulfilled"
+                req.save(update_fields=["status"])
 
-            # Update donor score silently — identity never exposed
-            donor.reliability_score = min(100, donor.reliability_score + 10)
-            donor.total_donations += 1
+                # Atomic donor update
+                Donor.objects.filter(pk=donor.pk).update(
+                    reliability_score=Least(F("reliability_score") + 10, 100),
+                    total_donations=F("total_donations") + 1,
+                )
 
-            # Update member tag based on donations
-            if donor.total_donations >= 10:
-                donor.member_tag = 'Platinum Donor'
-            elif donor.total_donations >= 5:
-                donor.member_tag = 'Gold Donor'
-            elif donor.total_donations >= 2:
-                donor.member_tag = 'Silver Donor'
-            else:
-                donor.member_tag = 'Bronze Donor'
+                donor.refresh_from_db(fields=["reliability_score", "total_donations"])
 
-            donor.save()
+                # Update member tag
+                if donor.total_donations >= 10:
+                    donor.member_tag = "Platinum Donor"
+                elif donor.total_donations >= 5:
+                    donor.member_tag = "Gold Donor"
+                elif donor.total_donations >= 2:
+                    donor.member_tag = "Silver Donor"
+                else:
+                    donor.member_tag = "Bronze Donor"
+
+                donor.save(update_fields=["member_tag"])
 
             return Response({
                 'message': 'Donation verified successfully.',
