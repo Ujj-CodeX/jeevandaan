@@ -278,6 +278,7 @@ export default {
 
   data() {
     return {
+      socket:null,
       requestId: null,
       requestInfo: null,
       messages: [],
@@ -352,22 +353,62 @@ donorRatingError: null,
 
   
     this.fetchDonorInfo()  
-    this.fetchMessages()
+    
     this.fetchRequestInfo()
-
-    // ── Step 4: Poll every 8 seconds ──────────
-    this.pollInterval = setInterval(() => {
-        this.fetchMessages()
-    }, 8000)
-
+// ---------------------------------------------------
+   this.connectWebSocket()
     
   },
 
   beforeUnmount() {
-    clearInterval(this.pollInterval)
-  },
+    if (this.socket) {
+        this.socket.close()
+    }
+},
 
   methods: {
+
+
+    // -----------------web socket -------------------------------------------
+
+
+    connectWebSocket() {
+
+    const token = localStorage.getItem("access_token")
+
+    this.socket = new WebSocket(
+        `ws://127.0.0.1:8000/ws/chat/${this.requestId}/?token=${token}`
+    )
+
+    this.socket.onopen = () => {
+        console.log(" WebSocket Connected")
+    }
+
+    this.socket.onclose = () => {
+        console.log(" WebSocket Closed")
+    }
+
+    this.socket.onerror = (err) => {
+        console.error("WebSocket Error", err)
+    }
+
+    this.socket.onmessage = (event) => {
+
+        const message = JSON.parse(event.data)
+
+        this.messages.push(message)
+
+        this.$nextTick(() => {
+            const container = this.$refs.chatContainer
+            if (container) {
+                container.scrollTop = container.scrollHeight
+            }
+        })
+    }
+},
+//--------------------------------------------------------------------------------------------
+
+
 
     formatMessage(text) {
   return text.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -378,39 +419,7 @@ donorRatingError: null,
       
     },
 
-    async fetchMessages() {
-    try {
-        const response = await api.get(
-            `http://127.0.0.1:8000/api/chat/${this.requestId}/history/`,
-            { params: { _t: Date.now() } }
-        )
-        this.messages = Array.isArray(response.data) ? response.data : []
-
-        // Extract OTP from system message
-        if (!this.otpCode) {
-            const otpMsg = this.messages.find(m => m.sender_type === 'system')
-            if (otpMsg) this.otpCode = otpMsg.otp_code
-        }
-
-        // Show rating if donation done
-        const donationDone = this.messages.find(
-            m => m.message === 'donated' || m.message === 'otp_verified'
-        )
-        if (donationDone && this.userType === 'donor') {
-            this.showDonorRating = true
-        }
-
-        this.$nextTick(() => {
-            const container = this.$refs.chatContainer
-            if (container) container.scrollTop = container.scrollHeight
-        })
-
-    } catch (err) {
-        console.error(err)
-    } finally {
-        this.loading = false
-    }
-},
+    
 
 async submitDonorRating() {
     if (!this.donorRatingForm.stars) {

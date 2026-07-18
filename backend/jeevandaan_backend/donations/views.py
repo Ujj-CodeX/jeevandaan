@@ -140,6 +140,7 @@ class PartnerDonationHistoryView(APIView):
 
 # ════════════════════════════════════════════════════
 #  PUBLIC LEADERBOARD
+# NOT IN USE RIGHT NOW, BUT CAN BE USED FOR FUTURE
 # ════════════════════════════════════════════════════
 
 class DonorLeaderboardView(APIView):

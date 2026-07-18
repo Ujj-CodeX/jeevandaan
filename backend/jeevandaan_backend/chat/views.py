@@ -13,6 +13,14 @@ from config.permissions import IsAuthenticated
 
 
 
+
+
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+
+
 #sendmaeesage -----------------
 
 class SendMessageView(APIView):
@@ -68,6 +76,18 @@ class SendMessageView(APIView):
                 return Response({'error': 'Invalid message.'}, status=status.HTTP_400_BAD_REQUEST)
             
             chat = Chat.objects.create(request=req, sender_type=sender_type, message=message)
+
+            channel_layer = get_channel_layer()
+
+            chat_data = ChatSerializer(chat).data
+
+            async_to_sync(channel_layer.group_send)(
+               f"chat_{request_id}",
+               {
+               "type": "chat.message",
+               "message": chat_data,
+                  },
+                )
            
 
             return Response({
