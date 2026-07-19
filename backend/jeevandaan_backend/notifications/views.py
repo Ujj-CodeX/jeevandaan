@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 
-from backend.jeevandaan_backend.conftest import partner
-from backend.jeevandaan_backend.notifications.tasks import send_donor_notifications_task
+
+from .tasks import send_donor_notifications_task
 from .models import Notification
 from .serializers import NotificationSerializer
 from users.models import Donor
@@ -93,6 +93,8 @@ class NotifyNearbyDonorsView(APIView):
 
     def post(self, request):
         try:
+            partner = request.user
+
             blood_group = request.data.get('blood_group')
             city = request.data.get('city')
             message = request.data.get(
