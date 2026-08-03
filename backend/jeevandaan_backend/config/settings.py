@@ -201,13 +201,9 @@ CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 # Stores task results (success/failure) back in Redis. Optional but useful for debugging.
 
-CELERY_BROKER_USE_SSL = {
-    "ssl_cert_reqs": ssl.CERT_NONE,
-}
+# CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE,}
 
-CELERY_REDIS_BACKEND_USE_SSL = {
-    "ssl_cert_reqs": ssl.CERT_NONE,
-}
+#CELERY_REDIS_BACKEND_USE_SSL = { "ssl_cert_reqs": ssl.CERT_NONE,}
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # Stores beat schedule in PostgreSQL so you can manage it from Django Admin.
