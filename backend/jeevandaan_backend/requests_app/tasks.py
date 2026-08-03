@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from celery import shared_task
 
-from backend.jeevandaan_backend.notifications.tasks import create_notification_task
+from notifications.tasks import create_notification_task
 
 @shared_task
 def expire_unvisited_donor_requests():
