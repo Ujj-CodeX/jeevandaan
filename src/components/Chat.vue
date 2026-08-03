@@ -355,6 +355,7 @@ donorRatingError: null,
     this.fetchDonorInfo()  
     
     this.fetchRequestInfo()
+    this.fetchMessages()
 // ---------------------------------------------------
    this.connectWebSocket()
     
@@ -550,6 +551,18 @@ async fetchDonorInfo() {
     } catch (err) {
         console.error(err)
     }
+},
+
+async fetchMessages() {
+  this.loading = true
+  try {
+    const response = await api.get(`http://127.0.0.1:8000/api/chat/${this.requestId}/messages/`)
+    this.messages = response.data
+  } catch (err) {
+    console.error('Failed to load messages:', err.response?.data || err)
+  } finally {
+    this.loading = false
+  }
 },
   }
 }
