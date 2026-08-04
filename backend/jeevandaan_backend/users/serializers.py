@@ -26,7 +26,7 @@ class DonorRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         raw_password = validated_data.pop('password')
-        hashed = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()  # ← fixed ✅
+        hashed = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode() 
         return Donor.objects.create(password=hashed, **validated_data)
         
 
