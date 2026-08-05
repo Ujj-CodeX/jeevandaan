@@ -120,4 +120,26 @@ Vue Component Receives Data
 (UI Successfully Updated)
 
 
-## 
+## 👤 User Onboarding (Complete User Lifecycle)
+
+1. DonorRegisterSerializer
+        ↓
+2. DonorRegisterView
+        ↓
+3. generate_jwt_token()
+        ↓
+4. Login Serializer
+        ↓
+5. Login View
+        ↓
+6. Profile View
+        ↓
+7. Update Profile
+        ↓
+8. Change Password
+        ↓
+9. Forgot Password
+        ↓
+10. Reset Password
+        ↓
+11. Aadhaar Verification
