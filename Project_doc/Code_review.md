@@ -143,3 +143,170 @@ Vue Component Receives Data
 10. Reset Password
         ↓
 11. Aadhaar Verification
+
+## FEATURE 1 ✅
+Authentication & Authorization
+        ↓
+JWT Generation
+        ↓
+JWT Validation
+        ↓
+Permission Classes
+        ↓
+Axios Interceptors
+        ↓
+Refresh Token Flow
+────────────────────────────────────
+
+FEATURE 2 👤
+User Lifecycle
+        ↓
+Register
+        ↓
+Login
+        ↓
+Profile
+        ↓
+Update Profile
+        ↓
+Update Location
+        ↓
+Change Password
+        ↓
+Forgot Password
+        ↓
+Reset Password
+        ↓
+Aadhaar Verification
+────────────────────────────────────
+
+FEATURE 3 🏥
+Partner Lifecycle
+        ↓
+Partner Register
+        ↓
+Partner Login
+        ↓
+Partner Profile
+        ↓
+Nearby Partners
+        ↓
+Nearby Donors
+────────────────────────────────────
+
+FEATURE 4 🩸 (CORE BUSINESS)
+Blood Request Flow
+        ↓
+Partner Creates Blood Request
+        ↓
+Nearby Donors Search
+        ↓
+Notifications Sent
+        ↓
+Donor Accepts Request
+        ↓
+OTP Generated
+        ↓
+Partner Verifies OTP
+        ↓
+Donation Verified
+        ↓
+Donation History
+        ↓
+Reliability Score Updated
+        ↓
+Leaderboard Updated
+────────────────────────────────────
+
+FEATURE 5 🚑
+Attender Flow
+        ↓
+Create Attender Request
+        ↓
+Partner Views Request
+        ↓
+Partner Fulfills Request
+        ↓
+Attender Rating
+────────────────────────────────────
+
+FEATURE 6 🩸
+Stock Management
+        ↓
+Update Stock
+        ↓
+Partner Stock
+        ↓
+Critical Stock
+        ↓
+Search Stock
+────────────────────────────────────
+
+FEATURE 7 🏕️
+Donation Camp Flow
+        ↓
+Create Camp
+        ↓
+Schedule Camp
+        ↓
+Notify Donors
+        ↓
+Donor Enroll
+        ↓
+Download CSV
+        ↓
+Update Stock
+────────────────────────────────────
+
+FEATURE 8 🔔
+Notification System
+        ↓
+Create Notification
+        ↓
+Broadcast Nearby Donors
+        ↓
+Notification List
+        ↓
+Mark Read
+────────────────────────────────────
+
+FEATURE 9 💬
+Chat System
+        ↓
+Send Status Message
+        ↓
+Chat History
+────────────────────────────────────
+
+FEATURE 10 ⚡
+Performance Review
+        ↓
+ORM Queries
+        ↓
+update_fields()
+        ↓
+F() Expressions
+        ↓
+select_related()
+        ↓
+prefetch_related()
+        ↓
+Caching
+        ↓
+Celery
+────────────────────────────────────
+
+FEATURE 11 🔒
+Security Review
+        ↓
+Rate Limiting
+        ↓
+OTP Security
+        ↓
+Refresh Rotation
+        ↓
+Encryption
+        ↓
+Race Conditions
+        ↓
+HTTPS
