@@ -296,17 +296,4 @@ Caching
 Celery
 ────────────────────────────────────
 
-FEATURE 11 🔒
-Security Review
-        ↓
-Rate Limiting
-        ↓
-OTP Security
-        ↓
-Refresh Rotation
-        ↓
-Encryption
-        ↓
-Race Conditions
-        ↓
-HTTPS
+
